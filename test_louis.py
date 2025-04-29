@@ -1,174 +1,338 @@
-
 import pygame
 import sys
 
-# Initialize Pygame
-pygame.init()
-
-# Screen dimensions
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 800
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (40, 40, 40)
-RED = (173, 7, 60)   # Rose pâle
-BLUE = (29, 185, 242)  # Bleu pastel
-YELLOW = (235, 226, 56)  # Jaune crème
-GREEN = (24, 181, 87)  # Vert menthe
+class Colors:
+    """Class to store color constants"""
+    WHITE = (255, 255, 255)
+    BLACK = (40, 40, 40)
+    RED = (173, 7, 60)       # Rose pâle
+    BLUE = (29, 185, 242)    # Bleu pastel
+    YELLOW = (235, 226, 56)  # Jaune crème
+    GREEN = (24, 181, 87)    # Vert menthe
 
 
+class SmallBoard:
+    """Class representing a small 4x4 board with colors"""
+    def __init__(self, color_grid):
+        self.color_grid = color_grid
+        self.rotation = 0
+        
+    def draw(self, screen, x, y, tile_size):
+        """Draw the small board at position (x, y) with current rotation"""
+        small_board_size = len(self.color_grid)
+        small_tile_size = tile_size // small_board_size
+        
+        for row in range(small_board_size):
+            for col in range(small_board_size):
+                # Adjust for rotation
+                if self.rotation == 0:
+                    color = self.color_grid[row][col]
+                elif self.rotation == 90:
+                    color = self.color_grid[small_board_size - 1 - col][row]
+                elif self.rotation == 180:
+                    color = self.color_grid[small_board_size - 1 - row][small_board_size - 1 - col]
+                elif self.rotation == 270:
+                    color = self.color_grid[col][small_board_size - 1 - row]
 
-# Grid dimensions
-GRID_SIZE = 2
-TILE_SIZE = SCREEN_WIDTH // GRID_SIZE
+                rect = pygame.Rect(
+                    x + col * small_tile_size, 
+                    y + row * small_tile_size, 
+                    small_tile_size, 
+                    small_tile_size
+                )
+                pygame.draw.rect(screen, color, rect)
+                pygame.draw.rect(screen, Colors.WHITE, rect, 1)
+    
+    def rotate(self):
+        """Rotate the board 90 degrees clockwise"""
+        self.rotation = (self.rotation + 90) % 360
 
-# Small board dimensions
-SMALL_BOARD_SIZE = 4
-SMALL_TILE_SIZE = TILE_SIZE // SMALL_BOARD_SIZE
 
-# Initialize screen
-screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Board Placement and Rotation")
+class GridPosition:
+    """Class representing a position in the 2x2 grid"""
+    def __init__(self, row, col, tile_size):
+        self.row = row
+        self.col = col
+        self.x = col * tile_size
+        self.y = row * tile_size
+        self.board = None
+        
+    def place_board(self, board):
+        """Place a board at this position"""
+        self.board = board
+        
+    def remove_board(self):
+        """Remove board from this position and return it"""
+        board = self.board
+        self.board = None
+        return board
+        
+    def has_board(self):
+        """Check if position has a board"""
+        return self.board is not None
+        
+    def draw(self, screen, tile_size):
+        """Draw grid cell and board if present"""
+        # Draw grid cell
+        rect = pygame.Rect(self.x, self.y, tile_size, tile_size)
+        pygame.draw.rect(screen, Colors.WHITE, rect, 1)
+        
+        # Draw board if present
+        if self.board:
+            self.board.draw(screen, self.x, self.y, tile_size)
 
-# Create small boards
-small_boards = [
-    [[RED, BLUE, YELLOW, GREEN], [BLUE, GREEN, RED, YELLOW], [YELLOW, RED, GREEN, BLUE], [GREEN, YELLOW, BLUE, RED]],
-    [[BLUE, GREEN, RED, YELLOW], [YELLOW, RED, GREEN, BLUE], [GREEN, YELLOW, BLUE, RED], [RED, BLUE, YELLOW, GREEN]],
-    [[YELLOW, RED, GREEN, BLUE], [GREEN, YELLOW, BLUE, RED], [RED, BLUE, YELLOW, GREEN], [BLUE, GREEN, RED, YELLOW]],
-    [[GREEN, YELLOW, BLUE, RED], [RED, BLUE, YELLOW, GREEN], [BLUE, GREEN, RED, YELLOW], [YELLOW, RED, GREEN, BLUE]]
-]
 
-# Variables for dragging
-selected_board = None
-selected_position = None
-selected_rotation = 0
-placed_boards = [None, None, None, None]  # To track boards placed in the 2x2 grid
+class GameBoard:
+    """Class representing the main 2x2 game board"""
+    def __init__(self, grid_size, screen_width):
+        self.grid_size = grid_size
+        self.tile_size = screen_width // grid_size
+        self.positions = []
+        
+        # Initialize grid positions
+        for row in range(grid_size):
+            for col in range(grid_size):
+                self.positions.append(GridPosition(row, col, self.tile_size))
+    
+    def draw(self, screen):
+        """Draw the game board and all placed boards"""
+        for position in self.positions:
+            position.draw(screen, self.tile_size)
+    
+    def get_position_at(self, x, y):
+        """Get grid position at screen coordinates (x, y)"""
+        col = x // self.tile_size
+        row = y // self.tile_size
+        
+        if 0 <= col < self.grid_size and 0 <= row < self.grid_size:
+            idx = row * self.grid_size + col
+            return self.positions[idx]
+        return None
+        
+    def swap_boards(self, pos1_idx, pos2_idx):
+        """Swap boards between two positions"""
+        temp_board = self.positions[pos1_idx].board
+        self.positions[pos1_idx].board = self.positions[pos2_idx].board
+        self.positions[pos2_idx].board = temp_board
 
-# Function to draw the large board
-def draw_large_board():
-    for row in range(GRID_SIZE):
-        for col in range(GRID_SIZE):
-            rect = pygame.Rect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE)
-            pygame.draw.rect(screen, WHITE, rect, 1)
 
-# Function to draw a small board
-def draw_small_board(board, x, y, rotation):
-    for row in range(SMALL_BOARD_SIZE):
-        for col in range(SMALL_BOARD_SIZE):
-            # Adjust for rotation
-            if rotation == 0:
-                color = board[row][col]
-            elif rotation == 90:
-                color = board[SMALL_BOARD_SIZE - 1 - col][row]
-            elif rotation == 180:
-                color = board[SMALL_BOARD_SIZE - 1 - row][SMALL_BOARD_SIZE - 1 - col]
-            elif rotation == 270:
-                color = board[col][SMALL_BOARD_SIZE - 1 - row]
+class BoardsInventory:
+    """Class representing the inventory of unused boards"""
+    def __init__(self, boards, screen_height, tile_size):
+        self.boards = boards
+        self.screen_height = screen_height
+        self.tile_size = tile_size
+        
+    def draw(self, screen, used_boards):
+        """Draw all unused boards at the bottom of the screen"""
+        for idx, board in enumerate(self.boards):
+            if board not in used_boards:
+                x = idx * self.tile_size
+                y = self.screen_height - self.tile_size
+                board.draw(screen, x, y, self.tile_size)
+    
+    def get_board_at(self, x, y, used_boards):
+        """Get board at screen coordinates (x, y) if it's in inventory"""
+        if self.screen_height - self.tile_size <= y < self.screen_height:
+            col = x // self.tile_size
+            if 0 <= col < len(self.boards):
+                board = self.boards[col]
+                if board not in used_boards:
+                    return board
+        return None
 
-            rect = pygame.Rect(
-                x + col * SMALL_TILE_SIZE, y + row * SMALL_TILE_SIZE, SMALL_TILE_SIZE, SMALL_TILE_SIZE
+
+class Game:
+    """Main game class"""
+    def __init__(self):
+        # Initialize Pygame
+        pygame.init()
+        
+        # Screen dimensions
+        self.SCREEN_WIDTH = 800
+        self.SCREEN_HEIGHT = 800
+        
+        # Initialize screen
+        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
+        pygame.display.set_caption("Board Placement and Rotation")
+        
+        # Grid dimensions
+        self.GRID_SIZE = 2
+        self.TILE_SIZE = self.SCREEN_WIDTH // self.GRID_SIZE
+        
+        # Small board dimensions
+        self.SMALL_BOARD_SIZE = 4
+        
+        # Create boards
+        self.create_boards()
+        
+        # Create game elements
+        self.game_board = GameBoard(self.GRID_SIZE, self.SCREEN_WIDTH)
+        self.inventory = BoardsInventory(self.boards, self.SCREEN_HEIGHT, self.TILE_SIZE)
+        
+        # Variables for dragging
+        self.selected_board = None
+        self.selected_from_position = None
+        self.selected_position = None
+        
+    def create_boards(self):
+        """Create the four boards with their color patterns"""
+        # Color patterns for the boards
+        color_grids = [
+            [[Colors.RED, Colors.BLUE, Colors.YELLOW, Colors.GREEN], 
+             [Colors.BLUE, Colors.GREEN, Colors.RED, Colors.YELLOW], 
+             [Colors.YELLOW, Colors.RED, Colors.GREEN, Colors.BLUE], 
+             [Colors.GREEN, Colors.YELLOW, Colors.BLUE, Colors.RED]],
+            
+            [[Colors.BLUE, Colors.GREEN, Colors.RED, Colors.YELLOW], 
+             [Colors.YELLOW, Colors.RED, Colors.GREEN, Colors.BLUE], 
+             [Colors.GREEN, Colors.YELLOW, Colors.BLUE, Colors.RED], 
+             [Colors.RED, Colors.BLUE, Colors.YELLOW, Colors.GREEN]],
+            
+            [[Colors.YELLOW, Colors.RED, Colors.GREEN, Colors.BLUE], 
+             [Colors.GREEN, Colors.YELLOW, Colors.BLUE, Colors.RED], 
+             [Colors.RED, Colors.BLUE, Colors.YELLOW, Colors.GREEN], 
+             [Colors.BLUE, Colors.GREEN, Colors.RED, Colors.YELLOW]],
+            
+            [[Colors.GREEN, Colors.YELLOW, Colors.BLUE, Colors.RED], 
+             [Colors.RED, Colors.BLUE, Colors.YELLOW, Colors.GREEN], 
+             [Colors.BLUE, Colors.GREEN, Colors.RED, Colors.YELLOW], 
+             [Colors.YELLOW, Colors.RED, Colors.GREEN, Colors.BLUE]]
+        ]
+        
+        self.boards = [SmallBoard(grid) for grid in color_grids]
+        
+    def get_used_boards(self):
+        """Get list of boards currently placed on the game board"""
+        used_boards = []
+        for position in self.game_board.positions:
+            if position.has_board():
+                used_boards.append(position.board)
+        return used_boards
+    
+    def handle_events(self):
+        """Handle all game events"""
+        try:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+                    
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handle_mouse_down(event.pos)
+                        
+                elif event.type == pygame.MOUSEBUTTONUP:
+                    self.handle_mouse_up(event.pos)
+                    
+                elif event.type == pygame.KEYDOWN:
+                    self.handle_key_down(event)
+                        
+                elif event.type == pygame.MOUSEMOTION:
+                    if self.selected_board is not None:
+                        self.selected_position = event.pos
+                        
+        except Exception as e:
+            print(f"Unhandled exception: {e}")
+            pygame.event.clear()
+            
+        return True
+        
+    def handle_mouse_down(self, pos):
+        """Handle mouse button down event"""
+        mouse_x, mouse_y = pos
+        
+        # Check if a grid position with a board is clicked
+        for idx, position in enumerate(self.game_board.positions):
+            if position.has_board() and position.x <= mouse_x < position.x + self.TILE_SIZE and position.y <= mouse_y < position.y + self.TILE_SIZE:
+                self.selected_board = position.remove_board()
+                self.selected_from_position = idx
+                self.selected_position = pos
+                return
+                
+        # Check if a board in inventory is clicked
+        used_boards = self.get_used_boards()
+        board = self.inventory.get_board_at(mouse_x, mouse_y, used_boards)
+        if board:
+            self.selected_board = board
+            self.selected_from_position = None
+            self.selected_position = pos
+            
+    def handle_mouse_up(self, pos):
+        """Handle mouse button up event"""
+        if self.selected_board is None:
+            return
+            
+        mouse_x, mouse_y = pos
+        
+        # Find grid position at mouse coordinates
+        target_position = self.game_board.get_position_at(mouse_x, mouse_y)
+        
+        if target_position:
+            # Get index of target position
+            target_idx = self.game_board.positions.index(target_position)
+            
+            # Handle board exchange
+            if target_position.has_board():
+                # Store the board that's already there
+                existing_board = target_position.board
+                
+                # Place selected board at target position
+                target_position.place_board(self.selected_board)
+                
+                # If selected board was from game board, place existing board there
+                if self.selected_from_position is not None:
+                    self.game_board.positions[self.selected_from_position].place_board(existing_board)
+            else:
+                # Simple placement with no exchange
+                target_position.place_board(self.selected_board)
+                
+        elif self.selected_from_position is not None:
+            # Return board to original position if not dropped on valid target
+            self.game_board.positions[self.selected_from_position].place_board(self.selected_board)
+            
+        # Reset selection
+        self.selected_board = None
+        self.selected_from_position = None
+        self.selected_position = None
+        
+    def handle_key_down(self, event):
+        """Handle key down event"""
+        if self.selected_board is not None and event.key == pygame.K_r:
+            self.selected_board.rotate()
+    
+    def draw(self):
+        """Draw the game"""
+        # Fill background
+        self.screen.fill(Colors.BLACK)
+        
+        # Draw game board
+        self.game_board.draw(self.screen)
+        
+        # Draw inventory
+        used_boards = self.get_used_boards()
+        self.inventory.draw(self.screen, used_boards)
+        
+        # Draw selected board if any
+        if self.selected_board is not None and self.selected_position is not None:
+            mouse_x, mouse_y = self.selected_position
+            self.selected_board.draw(
+                self.screen, 
+                mouse_x - self.TILE_SIZE // 2, 
+                mouse_y - self.TILE_SIZE // 2, 
+                self.TILE_SIZE
             )
-            pygame.draw.rect(screen, color, rect)
-            pygame.draw.rect(screen, WHITE, rect, 1)
-
-# Main game loop
-running = True
-while running:
-    screen.fill(BLACK)
-
-    # Draw the large board
-    draw_large_board()
-
-    # Draw placed small boards
-    for idx, board_info in enumerate(placed_boards):
-        if board_info is not None:
-            board, x, y, rotation = board_info
-            draw_small_board(board, x, y, rotation)
-
-    # Draw unplaced small boards
-    for idx, board in enumerate(small_boards):
-        if idx != selected_board and all(placed_boards[i] is None or placed_boards[i][0] != board for i in range(4)):
-            x, y = (idx * TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE)
-            draw_small_board(board, x, y, 0)
-
-    # Handle events
-    try:
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = event.pos
-
-                # Check if a small board is selected
-                for idx, board in enumerate(small_boards):
-                    if idx != selected_board and all(placed_boards[i] is None or placed_boards[i][0] != board for i in range(4)):
-                        x, y = (idx * TILE_SIZE, SCREEN_HEIGHT - TILE_SIZE)
-                        if x <= mouse_x < x + TILE_SIZE and y <= mouse_y < y + TILE_SIZE:
-                            selected_board = idx
-                            selected_position = (mouse_x, mouse_y)
-                            break
-
-                # Check if placed board is clicked
-                for idx, board_info in enumerate(placed_boards):
-                    if board_info is not None:
-                        board, x, y, rotation = board_info
-                        if x <= mouse_x < x + TILE_SIZE and y <= mouse_y < y + TILE_SIZE:
-                            selected_board = small_boards.index(board)
-                            selected_position = (mouse_x, mouse_y)
-                            placed_boards[idx] = None
-                            break
-
-            elif event.type == pygame.MOUSEBUTTONUP:
-                if selected_board is not None:
-                    mouse_x, mouse_y = event.pos
-
-                    # Snap to grid
-                    grid_x = mouse_x // TILE_SIZE
-                    grid_y = mouse_y // TILE_SIZE
-
-                if 0 <= grid_x < GRID_SIZE and 0 <= grid_y < GRID_SIZE:
-                    target_index = grid_y * GRID_SIZE + grid_x
-
-                    # Si un plateau est déjà à l'endroit ciblé, on l'échange
-                    existing_board_info = placed_boards[target_index]
-                    placed_boards[target_index] = (
-                        small_boards[selected_board],
-                        grid_x * TILE_SIZE,
-                        grid_y * TILE_SIZE,
-                        selected_rotation
-                    )
-
-                    if existing_board_info is not None:
-                        old_board, _, _, old_rotation = existing_board_info
-                        # Met l'ancien plateau dans la main
-                        selected_board = small_boards.index(old_board)
-                        selected_rotation = old_rotation
-                        selected_position = (mouse_x, mouse_y)
-                    else:
-                        # Rien à échanger, donc on a fini de placer
-                        selected_board = None
-                        selected_position = None
+            
+        pygame.display.flip()
+        
+    def run(self):
+        """Main game loop"""
+        running = True
+        while running:
+            running = self.handle_events()
+            self.draw()
+            
+        pygame.quit()
 
 
-            elif event.type == pygame.KEYDOWN:
-                if selected_board is not None:
-                    if event.key == pygame.K_r:  # Rotate the board
-                        selected_rotation = (selected_rotation + 90) % 360
-
-            elif event.type == pygame.MOUSEMOTION:
-                if selected_board is not None and selected_position is not None:
-                    selected_position = event.pos
-
-    except Exception as e:
-        print(f"Unhandled exception: {e}")
-        pygame.event.clear()
-
-    # Draw the currently dragged board
-    if selected_board is not None and selected_position is not None:
-        mouse_x, mouse_y = selected_position
-        draw_small_board(small_boards[selected_board], mouse_x - TILE_SIZE // 2, mouse_y - TILE_SIZE // 2, selected_rotation)
-
-    pygame.display.flip()
-pygame.quit()
+if __name__ == "__main__":
+    game = Game()
+    game.run()
