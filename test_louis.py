@@ -128,15 +128,29 @@ while running:
                     grid_x = mouse_x // TILE_SIZE
                     grid_y = mouse_y // TILE_SIZE
 
-                    if 0 <= grid_x < GRID_SIZE and 0 <= grid_y < GRID_SIZE:
-                        placed_boards[grid_y * GRID_SIZE + grid_x] = (
-                            small_boards[selected_board],
-                            grid_x * TILE_SIZE,
-                            grid_y * TILE_SIZE,
-                            selected_rotation
-                        )
+                if 0 <= grid_x < GRID_SIZE and 0 <= grid_y < GRID_SIZE:
+                    target_index = grid_y * GRID_SIZE + grid_x
 
-                    selected_board = None
+                    # Si un plateau est déjà à l'endroit ciblé, on l'échange
+                    existing_board_info = placed_boards[target_index]
+                    placed_boards[target_index] = (
+                        small_boards[selected_board],
+                        grid_x * TILE_SIZE,
+                        grid_y * TILE_SIZE,
+                        selected_rotation
+                    )
+
+                    if existing_board_info is not None:
+                        old_board, _, _, old_rotation = existing_board_info
+                        # Met l'ancien plateau dans la main
+                        selected_board = small_boards.index(old_board)
+                        selected_rotation = old_rotation
+                        selected_position = (mouse_x, mouse_y)
+                    else:
+                        # Rien à échanger, donc on a fini de placer
+                        selected_board = None
+                        selected_position = None
+
 
             elif event.type == pygame.KEYDOWN:
                 if selected_board is not None:
