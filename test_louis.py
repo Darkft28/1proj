@@ -127,7 +127,25 @@ class BoardGame:
                         )
                         pygame.draw.rect(self.screen, color, mini_rect)
                         pygame.draw.rect(self.screen, self.WHITE, mini_rect, 1)
-    
+        
+        # Draw Accept button (only if all boards are placed)
+        self.accept_button_rect = None
+        if None not in self.placed_boards:
+            button_width = 150
+            button_height = 50
+            button_x = self.PANEL_X + (self.PANEL_WIDTH - button_width) // 2
+            button_y = self.SCREEN_HEIGHT - 100
+            
+            self.accept_button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+            pygame.draw.rect(self.screen, self.GREEN, self.accept_button_rect)
+            pygame.draw.rect(self.screen, self.WHITE, self.accept_button_rect, 2)
+            
+            # Draw button text
+            button_font = pygame.font.Font(None, 30)
+            button_text = button_font.render("Accept", True, self.WHITE)
+            text_rect = button_text.get_rect(center=self.accept_button_rect.center)
+            self.screen.blit(button_text, text_rect)
+            
     def handle_mouse_down(self, pos):
         mouse_x, mouse_y = pos
         
