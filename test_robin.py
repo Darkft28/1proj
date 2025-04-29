@@ -6,7 +6,7 @@ class EditeurPlateau:
         pygame.init()
         
         # Dimensions de l'écran
-        self.LARGEUR_ECRAN = 1000
+        self.LARGEUR_ECRAN = 1075
         self.LARGEUR_JEU = 800
         self.HAUTEUR_ECRAN = 800
         
