@@ -15,8 +15,9 @@ class JeuDePlateau:
         pygame.init()
         
         # Dimensions de l'écran
-        self.LARGEUR_ECRAN = 1075 # Largeur augmentée pour le panneau latéral
         self.LARGEUR_JEU = 800     # Largeur originale de la zone de jeu
+        self.LARGEUR_PANNEAU = 300  # Largeur du panneau d'édition
+        self.LARGEUR_ECRAN = self.LARGEUR_JEU + self.LARGEUR_PANNEAU # Largeur augmentée pour le panneau latéral
         self.HAUTEUR_ECRAN = 800
         
         # Dimensions de la grille
@@ -72,6 +73,7 @@ class JeuDePlateau:
         # Mode
         self.mode_edition = True  # True: mode édition, False: mode affichage
         self.plateau_combine = None  # Plateau combiné 8x8
+        self.cacher_aperçus = False  # Contrôle l'affichage des aperçus dans le panneau d'édition
         
     def dessiner_grand_plateau(self):
         for ligne in range(self.TAILLE_GRILLE):
@@ -103,72 +105,74 @@ class JeuDePlateau:
                 pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
     
     def dessiner_panneau_edition(self):
-        # Dessiner l'arrière-plan du panneau
-        rect_panneau = pygame.Rect(self.POSITION_X_PANNEAU, 0, self.LARGEUR_PANNEAU, self.HAUTEUR_ECRAN)
-        pygame.draw.rect(self.ecran, (60, 60, 60), rect_panneau)
         
-        # Dessiner le titre
-        police = pygame.font.Font(None, 36)
-        titre = police.render("Éditeur de Plateau", True, self.BLANC)
-        self.ecran.blit(titre, (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, self.MARGE_PANNEAU))
-        
-        if self.mode_edition:
-            # Dessiner les aperçus des plateaux disponibles
-            for idx, plateau in enumerate(self.petits_plateaux):
-                if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != plateau for i in range(4)):
-                    position_y = idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU) + 80
-                    rect_apercu = pygame.Rect(self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, position_y, 
-                                             self.TAILLE_APERCU, self.TAILLE_APERCU)
-                    pygame.draw.rect(self.ecran, (80, 80, 80), rect_apercu)
-                    pygame.draw.rect(self.ecran, self.BLANC, rect_apercu, 2)
+        if self.cacher_aperçus is not True:
+
+            # Dessiner l'arrière-plan du panneau
+            rect_panneau = pygame.Rect(self.POSITION_X_PANNEAU, 0, self.LARGEUR_PANNEAU, self.HAUTEUR_ECRAN)
+            pygame.draw.rect(self.ecran, (60, 60, 60), rect_panneau)
+            # Dessiner le titre
+            police = pygame.font.Font(None, 36)
+            titre = police.render("Éditeur de Plateau", True, self.BLANC)
+            self.ecran.blit(titre, (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, self.MARGE_PANNEAU))
+            
+            if self.mode_edition:
+                # Dessiner les aperçus des plateaux disponibles
+                for idx, plateau in enumerate(self.petits_plateaux):
+                    if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != plateau for i in range(4)):
+                        position_y = idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU) + 80
+                        rect_apercu = pygame.Rect(self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, position_y, 
+                                                self.TAILLE_APERCU, self.TAILLE_APERCU)
+                        pygame.draw.rect(self.ecran, (80, 80, 80), rect_apercu)
+                        pygame.draw.rect(self.ecran, self.BLANC, rect_apercu, 2)
+                        
+                        # Dessiner une version miniature du plateau
+                        mini_tuile = self.TAILLE_APERCU // self.TAILLE_PETIT_PLATEAU
+                        for ligne in range(self.TAILLE_PETIT_PLATEAU):
+                            for colonne in range(self.TAILLE_PETIT_PLATEAU):
+                                couleur = plateau[ligne][colonne]
+                                mini_rect = pygame.Rect(
+                                    self.POSITION_X_PANNEAU + self.MARGE_PANNEAU + colonne * mini_tuile,
+                                    position_y + ligne * mini_tuile,
+                                    mini_tuile,
+                                    mini_tuile
+                                )
+                                pygame.draw.rect(self.ecran, couleur, mini_rect)
+                                pygame.draw.rect(self.ecran, self.BLANC, mini_rect, 1)
+                
+                # Vérifier si tous les plateaux sont placés
+                tous_plateaux_places = all(plateau is not None for plateau in self.plateaux_places)
+                
+                # Dessiner le bouton accepter seulement si tous les plateaux sont placés
+                if tous_plateaux_places:
+                    bouton_x = self.POSITION_X_PANNEAU + self.MARGE_PANNEAU
+                    bouton_y = self.HAUTEUR_ECRAN - self.MARGE_PANNEAU - 50
+                    bouton_largeur = self.LARGEUR_PANNEAU - (2 * self.MARGE_PANNEAU)
+                    bouton_hauteur = 40
                     
-                    # Dessiner une version miniature du plateau
-                    mini_tuile = self.TAILLE_APERCU // self.TAILLE_PETIT_PLATEAU
-                    for ligne in range(self.TAILLE_PETIT_PLATEAU):
-                        for colonne in range(self.TAILLE_PETIT_PLATEAU):
-                            couleur = plateau[ligne][colonne]
-                            mini_rect = pygame.Rect(
-                                self.POSITION_X_PANNEAU + self.MARGE_PANNEAU + colonne * mini_tuile,
-                                position_y + ligne * mini_tuile,
-                                mini_tuile,
-                                mini_tuile
-                            )
-                            pygame.draw.rect(self.ecran, couleur, mini_rect)
-                            pygame.draw.rect(self.ecran, self.BLANC, mini_rect, 1)
-            
-            # Vérifier si tous les plateaux sont placés
-            tous_plateaux_places = all(plateau is not None for plateau in self.plateaux_places)
-            
-            # Dessiner le bouton accepter seulement si tous les plateaux sont placés
-            if tous_plateaux_places:
-                bouton_x = self.POSITION_X_PANNEAU + self.MARGE_PANNEAU
-                bouton_y = self.HAUTEUR_ECRAN - self.MARGE_PANNEAU - 50
-                bouton_largeur = self.LARGEUR_PANNEAU - (2 * self.MARGE_PANNEAU)
-                bouton_hauteur = 40
-                
-                # Dessiner le bouton
-                rect_bouton = pygame.Rect(bouton_x, bouton_y, bouton_largeur, bouton_hauteur)
-                
-                # Changer la couleur au survol
-                souris_x, souris_y = pygame.mouse.get_pos()
-                if rect_bouton.collidepoint(souris_x, souris_y):
-                    couleur_bouton = (100, 200, 100)  # Vert plus clair au survol
-                else:
-                    couleur_bouton = (50, 150, 50)  # Vert normal
-                
-                pygame.draw.rect(self.ecran, couleur_bouton, rect_bouton)
-                pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2)
-                
-                # Texte du bouton
-                police = pygame.font.Font(None, 30)
-                texte = police.render("Accepter", True, self.BLANC)
-                rect_texte = texte.get_rect(center=rect_bouton.center)
-                self.ecran.blit(texte, rect_texte)
-                
-                return rect_bouton  # Retourner le rectangle pour la détection de clic
+                    # Dessiner le bouton
+                    rect_bouton = pygame.Rect(bouton_x, bouton_y, bouton_largeur, bouton_hauteur)
+                    
+                    # Changer la couleur au survol
+                    souris_x, souris_y = pygame.mouse.get_pos()
+                    if rect_bouton.collidepoint(souris_x, souris_y):
+                        couleur_bouton = (100, 200, 100)  # Vert plus clair au survol
+                    else:
+                        couleur_bouton = (50, 150, 50)  # Vert normal
+                    
+                    pygame.draw.rect(self.ecran, couleur_bouton, rect_bouton)
+                    pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2)
+                    
+                    # Texte du bouton
+                    police = pygame.font.Font(None, 30)
+                    texte = police.render("Accepter", True, self.BLANC)
+                    rect_texte = texte.get_rect(center=rect_bouton.center)
+                    self.ecran.blit(texte, rect_texte)
+                    
+                    return rect_bouton  # Retourner le rectangle pour la détection de clic
             
         return None
-    
+
     def gerer_souris_appui(self, pos):
         souris_x, souris_y = pos
         
@@ -182,6 +186,8 @@ class JeuDePlateau:
                     if all(plateau is not None for plateau in self.plateaux_places):
                         self.creer_plateau_combine()
                         self.mode_edition = False
+                        self.cacher_aperçus = True
+                        
                 else:
                     # Bouton de réinitialisation cliqué
                     self.mode_edition = True
@@ -262,7 +268,6 @@ class JeuDePlateau:
             self.position_selection = pos
             
     def creer_plateau_combine(self):
-        """Créer un plateau 8x8 combiné à partir des quatre plateaux 4x4 placés"""
         # Initialiser le plateau 8x8
         self.plateau_combine = [[None for _ in range(self.TAILLE_PLATEAU_COMBINE)] for _ in range(self.TAILLE_PLATEAU_COMBINE)]
         
