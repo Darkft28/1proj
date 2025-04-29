@@ -145,7 +145,7 @@ class BoardGame:
             button_text = button_font.render("Accept", True, self.WHITE)
             text_rect = button_text.get_rect(center=self.accept_button_rect.center)
             self.screen.blit(button_text, text_rect)
-            
+
     def handle_mouse_down(self, pos):
         mouse_x, mouse_y = pos
         

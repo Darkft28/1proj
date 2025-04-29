@@ -6,7 +6,7 @@ class EditeurPlateau:
         pygame.init()
         
         # Dimensions de l'écran
-        self.LARGEUR_ECRAN = 1000
+        self.LARGEUR_ECRAN = 1075
         self.LARGEUR_JEU = 800
         self.HAUTEUR_ECRAN = 800
         
@@ -109,6 +109,40 @@ class EditeurPlateau:
             if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != plateau 
                   for i in range(4)):
                 self._dessiner_apercu_plateau(idx, plateau)
+
+        # Vérifier si tous les plateaux sont placés
+        tous_plateaux_places = all(plateau is not None for plateau in self.plateaux_places)
+                
+        # Dessiner le bouton d'acceptation uniquement si tous les plateaux sont placés
+        if tous_plateaux_places:
+            # Position et dimensions du bouton
+            bouton_x = self.POS_X_PANNEAU + self.MARGE_PANNEAU
+            bouton_y = self.HAUTEUR_ECRAN - self.MARGE_PANNEAU - 50
+            bouton_largeur = self.LARGEUR_PANNEAU - (2 * self.MARGE_PANNEAU)
+            bouton_hauteur = 40
+                        
+            # Dessiner le bouton
+            rect_bouton = pygame.Rect(bouton_x, bouton_y, bouton_largeur, bouton_hauteur)
+                        
+            # Changer la couleur si la souris survole le bouton
+            souris_x, souris_y = pygame.mouse.get_pos()
+            if rect_bouton.collidepoint(souris_x, souris_y):
+                couleur_bouton = (100, 200, 100)  # Vert plus clair sur survol
+            else:
+                couleur_bouton = (50, 150, 50)  # Vert normal
+                            
+            pygame.draw.rect(self.ecran, couleur_bouton, rect_bouton)
+            pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2)
+                        
+            # Texte du bouton
+            police = pygame.font.Font(None, 30)
+            texte = police.render("Accepter", True, self.BLANC)
+            texte_rect = texte.get_rect(center=rect_bouton.center)
+            self.ecran.blit(texte, texte_rect)
+                        
+            return rect_bouton  # Renvoie le rectangle pour la détection de clic
+                
+            return None  # Retourne None si le bouton n'est pas affiché
 
     def _dessiner_apercu_plateau(self, idx, plateau):
         y_pos = idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU) + 80
