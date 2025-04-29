@@ -1,381 +1,381 @@
 import pygame
 import sys
 
-class BoardGame:
-    # Colors
-    WHITE = (255, 255, 255)
-    BLACK = (40, 40, 40)
-    RED = (173, 7, 60)      # Rose pâle
-    BLUE = (29, 185, 242)   # Bleu pastel
-    YELLOW = (235, 226, 56) # Jaune crème
-    GREEN = (24, 181, 87)   # Vert menthe
+class JeuDePlateau:
+    # Couleurs
+    BLANC = (255, 255, 255)
+    NOIR = (40, 40, 40)
+    ROUGE = (173, 7, 60)    
+    BLEU = (29, 185, 242)     
+    JAUNE = (235, 226, 56)    
+    VERT = (24, 181, 87)     
 
     def __init__(self):
-        # Initialize Pygame
+        # Initialiser Pygame
         pygame.init()
         
-        # Screen dimensions
-        self.SCREEN_WIDTH = 1000  # Increased width for side panel
-        self.GAME_WIDTH = 800     # Original game area width
-        self.SCREEN_HEIGHT = 800
+        # Dimensions de l'écran
+        self.LARGEUR_ECRAN = 1075 # Largeur augmentée pour le panneau latéral
+        self.LARGEUR_JEU = 800     # Largeur originale de la zone de jeu
+        self.HAUTEUR_ECRAN = 800
         
-        # Grid dimensions
-        self.GRID_SIZE = 2
-        self.TILE_SIZE = self.GAME_WIDTH // self.GRID_SIZE
+        # Dimensions de la grille
+        self.TAILLE_GRILLE = 2
+        self.TAILLE_TUILE = self.LARGEUR_JEU // self.TAILLE_GRILLE
         
-        # Small board dimensions
-        self.SMALL_BOARD_SIZE = 4
-        self.SMALL_TILE_SIZE = self.TILE_SIZE // self.SMALL_BOARD_SIZE
+        # Dimensions des petits plateaux
+        self.TAILLE_PETIT_PLATEAU = 4
+        self.TAILLE_PETITE_TUILE = self.TAILLE_TUILE // self.TAILLE_PETIT_PLATEAU
         
-        # Combined board
-        self.COMBINED_BOARD_SIZE = self.SMALL_BOARD_SIZE * self.GRID_SIZE  # 8x8
+        # Plateau combiné
+        self.TAILLE_PLATEAU_COMBINE = self.TAILLE_PETIT_PLATEAU * self.TAILLE_GRILLE  # 8x8
         
-        # Editor panel constants
-        self.PANEL_X = self.GAME_WIDTH
-        self.PANEL_WIDTH = self.SCREEN_WIDTH - self.GAME_WIDTH
-        self.PREVIEW_SIZE = 150
-        self.PANEL_PADDING = 20
+        # Constantes du panneau d'édition
+        self.POSITION_X_PANNEAU = self.LARGEUR_JEU
+        self.LARGEUR_PANNEAU = self.LARGEUR_ECRAN - self.LARGEUR_JEU
+        self.TAILLE_APERCU = 150
+        self.MARGE_PANNEAU = 20
         
-        # Initialize screen
-        self.screen = pygame.display.set_mode((self.SCREEN_WIDTH, self.SCREEN_HEIGHT))
-        pygame.display.set_caption("Board Placement and Rotation")
+        # Initialiser l'écran
+        self.ecran = pygame.display.set_mode((self.LARGEUR_ECRAN, self.HAUTEUR_ECRAN))
+        pygame.display.set_caption("Placement et Rotation de Plateaux")
         
-        # Create small boards
-        self.small_boards = [
-            [[self.RED, self.BLUE, self.YELLOW, self.GREEN], 
-             [self.BLUE, self.GREEN, self.RED, self.YELLOW], 
-             [self.YELLOW, self.RED, self.GREEN, self.BLUE], 
-             [self.GREEN, self.YELLOW, self.BLUE, self.RED]],
+        # Créer les petits plateaux
+        self.petits_plateaux = [
+            [[self.ROUGE, self.BLEU, self.JAUNE, self.VERT], 
+             [self.BLEU, self.VERT, self.ROUGE, self.JAUNE], 
+             [self.JAUNE, self.ROUGE, self.VERT, self.BLEU], 
+             [self.VERT, self.JAUNE, self.BLEU, self.ROUGE]],
             
-            [[self.BLUE, self.GREEN, self.RED, self.YELLOW], 
-             [self.YELLOW, self.RED, self.GREEN, self.BLUE], 
-             [self.GREEN, self.YELLOW, self.BLUE, self.RED], 
-             [self.RED, self.BLUE, self.YELLOW, self.GREEN]],
+            [[self.BLEU, self.VERT, self.ROUGE, self.JAUNE], 
+             [self.JAUNE, self.ROUGE, self.VERT, self.BLEU], 
+             [self.VERT, self.JAUNE, self.BLEU, self.ROUGE], 
+             [self.ROUGE, self.BLEU, self.JAUNE, self.VERT]],
             
-            [[self.YELLOW, self.RED, self.GREEN, self.BLUE], 
-             [self.GREEN, self.YELLOW, self.BLUE, self.RED], 
-             [self.RED, self.BLUE, self.YELLOW, self.GREEN], 
-             [self.BLUE, self.GREEN, self.RED, self.YELLOW]],
+            [[self.JAUNE, self.ROUGE, self.VERT, self.BLEU], 
+             [self.VERT, self.JAUNE, self.BLEU, self.ROUGE], 
+             [self.ROUGE, self.BLEU, self.JAUNE, self.VERT], 
+             [self.BLEU, self.VERT, self.ROUGE, self.JAUNE]],
             
-            [[self.GREEN, self.YELLOW, self.BLUE, self.RED], 
-             [self.RED, self.BLUE, self.YELLOW, self.GREEN], 
-             [self.BLUE, self.GREEN, self.RED, self.YELLOW], 
-             [self.YELLOW, self.RED, self.GREEN, self.BLUE]]
+            [[self.VERT, self.JAUNE, self.BLEU, self.ROUGE], 
+             [self.ROUGE, self.BLEU, self.JAUNE, self.VERT], 
+             [self.BLEU, self.VERT, self.ROUGE, self.JAUNE], 
+             [self.JAUNE, self.ROUGE, self.VERT, self.BLEU]]
         ]
         
-        # Variables for dragging
-        self.selected_board = None
-        self.selected_position = None
-        self.selected_rotation = 0
-        self.placed_boards = [None, None, None, None]  # To track boards placed in the 2x2 grid
+        # Variables pour le glisser-déposer
+        self.plateau_selectionne = None
+        self.position_selection = None
+        self.rotation_selection = 0
+        self.plateaux_places = [None, None, None, None]  # Pour suivre les plateaux placés dans la grille 2x2
         
         # Mode
-        self.edit_mode = True  # True: editing mode, False: display mode
-        self.combined_board = None  # 8x8 combined board
+        self.mode_edition = True  # True: mode édition, False: mode affichage
+        self.plateau_combine = None  # Plateau combiné 8x8
         
-    def draw_large_board(self):
-        for row in range(self.GRID_SIZE):
-            for col in range(self.GRID_SIZE):
-                rect = pygame.Rect(col * self.TILE_SIZE, row * self.TILE_SIZE, 
-                                  self.TILE_SIZE, self.TILE_SIZE)
-                pygame.draw.rect(self.screen, self.WHITE, rect, 1)
+    def dessiner_grand_plateau(self):
+        for ligne in range(self.TAILLE_GRILLE):
+            for colonne in range(self.TAILLE_GRILLE):
+                rect = pygame.Rect(colonne * self.TAILLE_TUILE, ligne * self.TAILLE_TUILE, 
+                                  self.TAILLE_TUILE, self.TAILLE_TUILE)
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
     
-    def draw_small_board(self, board, x, y, rotation):
-        for row in range(self.SMALL_BOARD_SIZE):
-            for col in range(self.SMALL_BOARD_SIZE):
-                # Adjust for rotation
+    def dessiner_petit_plateau(self, plateau, x, y, rotation):
+        for ligne in range(self.TAILLE_PETIT_PLATEAU):
+            for colonne in range(self.TAILLE_PETIT_PLATEAU):
+                # Ajustement pour la rotation
                 if rotation == 0:
-                    color = board[row][col]
+                    couleur = plateau[ligne][colonne]
                 elif rotation == 90:
-                    color = board[self.SMALL_BOARD_SIZE - 1 - col][row]
+                    couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - colonne][ligne]
                 elif rotation == 180:
-                    color = board[self.SMALL_BOARD_SIZE - 1 - row][self.SMALL_BOARD_SIZE - 1 - col]
+                    couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - ligne][self.TAILLE_PETIT_PLATEAU - 1 - colonne]
                 elif rotation == 270:
-                    color = board[col][self.SMALL_BOARD_SIZE - 1 - row]
+                    couleur = plateau[colonne][self.TAILLE_PETIT_PLATEAU - 1 - ligne]
     
                 rect = pygame.Rect(
-                    x + col * self.SMALL_TILE_SIZE, 
-                    y + row * self.SMALL_TILE_SIZE, 
-                    self.SMALL_TILE_SIZE, 
-                    self.SMALL_TILE_SIZE
+                    x + colonne * self.TAILLE_PETITE_TUILE, 
+                    y + ligne * self.TAILLE_PETITE_TUILE, 
+                    self.TAILLE_PETITE_TUILE, 
+                    self.TAILLE_PETITE_TUILE
                 )
-                pygame.draw.rect(self.screen, color, rect)
-                pygame.draw.rect(self.screen, self.WHITE, rect, 1)
+                pygame.draw.rect(self.ecran, couleur, rect)
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
     
-    def draw_editor_panel(self):
-        # Draw panel background
-        panel_rect = pygame.Rect(self.PANEL_X, 0, self.PANEL_WIDTH, self.SCREEN_HEIGHT)
-        pygame.draw.rect(self.screen, (60, 60, 60), panel_rect)
+    def dessiner_panneau_edition(self):
+        # Dessiner l'arrière-plan du panneau
+        rect_panneau = pygame.Rect(self.POSITION_X_PANNEAU, 0, self.LARGEUR_PANNEAU, self.HAUTEUR_ECRAN)
+        pygame.draw.rect(self.ecran, (60, 60, 60), rect_panneau)
         
-        # Draw title
-        font = pygame.font.Font(None, 36)
-        title = font.render("Board Editor", True, self.WHITE)
-        self.screen.blit(title, (self.PANEL_X + self.PANEL_PADDING, self.PANEL_PADDING))
+        # Dessiner le titre
+        police = pygame.font.Font(None, 36)
+        titre = police.render("Éditeur de Plateau", True, self.BLANC)
+        self.ecran.blit(titre, (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, self.MARGE_PANNEAU))
         
-        if self.edit_mode:
-            # Draw available boards preview
-            for idx, board in enumerate(self.small_boards):
-                if all(self.placed_boards[i] is None or self.placed_boards[i][0] != board for i in range(4)):
-                    y_pos = idx * (self.PREVIEW_SIZE + self.PANEL_PADDING) + 80
-                    preview_rect = pygame.Rect(self.PANEL_X + self.PANEL_PADDING, y_pos, 
-                                             self.PREVIEW_SIZE, self.PREVIEW_SIZE)
-                    pygame.draw.rect(self.screen, (80, 80, 80), preview_rect)
-                    pygame.draw.rect(self.screen, self.WHITE, preview_rect, 2)
+        if self.mode_edition:
+            # Dessiner les aperçus des plateaux disponibles
+            for idx, plateau in enumerate(self.petits_plateaux):
+                if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != plateau for i in range(4)):
+                    position_y = idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU) + 80
+                    rect_apercu = pygame.Rect(self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, position_y, 
+                                             self.TAILLE_APERCU, self.TAILLE_APERCU)
+                    pygame.draw.rect(self.ecran, (80, 80, 80), rect_apercu)
+                    pygame.draw.rect(self.ecran, self.BLANC, rect_apercu, 2)
                     
-                    # Draw miniature version of the board
-                    mini_tile = self.PREVIEW_SIZE // self.SMALL_BOARD_SIZE
-                    for row in range(self.SMALL_BOARD_SIZE):
-                        for col in range(self.SMALL_BOARD_SIZE):
-                            color = board[row][col]
+                    # Dessiner une version miniature du plateau
+                    mini_tuile = self.TAILLE_APERCU // self.TAILLE_PETIT_PLATEAU
+                    for ligne in range(self.TAILLE_PETIT_PLATEAU):
+                        for colonne in range(self.TAILLE_PETIT_PLATEAU):
+                            couleur = plateau[ligne][colonne]
                             mini_rect = pygame.Rect(
-                                self.PANEL_X + self.PANEL_PADDING + col * mini_tile,
-                                y_pos + row * mini_tile,
-                                mini_tile,
-                                mini_tile
+                                self.POSITION_X_PANNEAU + self.MARGE_PANNEAU + colonne * mini_tuile,
+                                position_y + ligne * mini_tuile,
+                                mini_tuile,
+                                mini_tuile
                             )
-                            pygame.draw.rect(self.screen, color, mini_rect)
-                            pygame.draw.rect(self.screen, self.WHITE, mini_rect, 1)
+                            pygame.draw.rect(self.ecran, couleur, mini_rect)
+                            pygame.draw.rect(self.ecran, self.BLANC, mini_rect, 1)
             
-            # Check if all boards are placed
-            all_boards_placed = all(board is not None for board in self.placed_boards)
+            # Vérifier si tous les plateaux sont placés
+            tous_plateaux_places = all(plateau is not None for plateau in self.plateaux_places)
             
-            # Draw the accept button only if all boards are placed
-            if all_boards_placed:
-                button_x = self.PANEL_X + self.PANEL_PADDING
-                button_y = self.SCREEN_HEIGHT - self.PANEL_PADDING - 50
-                button_width = self.PANEL_WIDTH - (2 * self.PANEL_PADDING)
-                button_height = 40
+            # Dessiner le bouton accepter seulement si tous les plateaux sont placés
+            if tous_plateaux_places:
+                bouton_x = self.POSITION_X_PANNEAU + self.MARGE_PANNEAU
+                bouton_y = self.HAUTEUR_ECRAN - self.MARGE_PANNEAU - 50
+                bouton_largeur = self.LARGEUR_PANNEAU - (2 * self.MARGE_PANNEAU)
+                bouton_hauteur = 40
                 
-                # Draw the button
-                button_rect = pygame.Rect(button_x, button_y, button_width, button_height)
+                # Dessiner le bouton
+                rect_bouton = pygame.Rect(bouton_x, bouton_y, bouton_largeur, bouton_hauteur)
                 
-                # Change color on hover
-                mouse_x, mouse_y = pygame.mouse.get_pos()
-                if button_rect.collidepoint(mouse_x, mouse_y):
-                    button_color = (100, 200, 100)  # Lighter green on hover
+                # Changer la couleur au survol
+                souris_x, souris_y = pygame.mouse.get_pos()
+                if rect_bouton.collidepoint(souris_x, souris_y):
+                    couleur_bouton = (100, 200, 100)  # Vert plus clair au survol
                 else:
-                    button_color = (50, 150, 50)  # Normal green
+                    couleur_bouton = (50, 150, 50)  # Vert normal
                 
-                pygame.draw.rect(self.screen, button_color, button_rect)
-                pygame.draw.rect(self.screen, self.WHITE, button_rect, 2)
+                pygame.draw.rect(self.ecran, couleur_bouton, rect_bouton)
+                pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2)
                 
-                # Button text
-                font = pygame.font.Font(None, 30)
-                text = font.render("Accepter", True, self.WHITE)
-                text_rect = text.get_rect(center=button_rect.center)
-                self.screen.blit(text, text_rect)
+                # Texte du bouton
+                police = pygame.font.Font(None, 30)
+                texte = police.render("Accepter", True, self.BLANC)
+                rect_texte = texte.get_rect(center=rect_bouton.center)
+                self.ecran.blit(texte, rect_texte)
                 
-                return button_rect  # Return the rectangle for click detection
+                return rect_bouton  # Retourner le rectangle pour la détection de clic
             
         return None
     
-    def handle_mouse_down(self, pos):
-        mouse_x, mouse_y = pos
+    def gerer_souris_appui(self, pos):
+        souris_x, souris_y = pos
         
-        # Check if click is in editor panel
-        if self.PANEL_X <= mouse_x <= self.SCREEN_WIDTH:
-            # Check for button click
-            button_rect = self.draw_editor_panel()
-            if button_rect and button_rect.collidepoint(mouse_x, mouse_y):
-                if self.edit_mode:
-                    # Check if all boards are placed
-                    if all(board is not None for board in self.placed_boards):
-                        self.create_combined_board()
-                        self.edit_mode = False
+        # Vérifier si le clic est dans le panneau d'édition
+        if self.POSITION_X_PANNEAU <= souris_x <= self.LARGEUR_ECRAN:
+            # Vérifier le clic sur le bouton
+            rect_bouton = self.dessiner_panneau_edition()
+            if rect_bouton and rect_bouton.collidepoint(souris_x, souris_y):
+                if self.mode_edition:
+                    # Vérifier si tous les plateaux sont placés
+                    if all(plateau is not None for plateau in self.plateaux_places):
+                        self.creer_plateau_combine()
+                        self.mode_edition = False
                 else:
-                    # Reset button clicked
-                    self.edit_mode = True
-                    self.combined_board = None
-                    self.placed_boards = [None, None, None, None]
-                    self.selected_board = None
-                    self.selected_position = None
-                    self.selected_rotation = 0
+                    # Bouton de réinitialisation cliqué
+                    self.mode_edition = True
+                    self.plateau_combine = None
+                    self.plateaux_places = [None, None, None, None]
+                    self.plateau_selectionne = None
+                    self.position_selection = None
+                    self.rotation_selection = 0
                 return
             
-            # Only handle board selection in edit mode
-            if self.edit_mode:
-                idx = (mouse_y - 80) // (self.PREVIEW_SIZE + self.PANEL_PADDING)
-                if 0 <= idx < len(self.small_boards):
-                    if all(self.placed_boards[i] is None or self.placed_boards[i][0] != self.small_boards[idx] for i in range(4)):
-                        self.selected_board = idx
-                        self.selected_position = (self.PANEL_X + self.PANEL_PADDING, 
-                                                80 + idx * (self.PREVIEW_SIZE + self.PANEL_PADDING))
+            # Gérer la sélection de plateau uniquement en mode édition
+            if self.mode_edition:
+                idx = (souris_y - 80) // (self.TAILLE_APERCU + self.MARGE_PANNEAU)
+                if 0 <= idx < len(self.petits_plateaux):
+                    if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != self.petits_plateaux[idx] for i in range(4)):
+                        self.plateau_selectionne = idx
+                        self.position_selection = (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, 
+                                                80 + idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU))
         
-        # Check if placed board is clicked (only in edit mode)
-        elif self.edit_mode:
-            for idx, board_info in enumerate(self.placed_boards):
-                if board_info is not None:
-                    board, x, y, rotation = board_info
-                    if x <= mouse_x < x + self.TILE_SIZE and y <= mouse_y < y + self.TILE_SIZE:
-                        self.selected_board = self.small_boards.index(board)
-                        self.selected_position = (mouse_x, mouse_y)
-                        self.placed_boards[idx] = None
+        # Vérifier si un plateau placé est cliqué (seulement en mode édition)
+        elif self.mode_edition:
+            for idx, info_plateau in enumerate(self.plateaux_places):
+                if info_plateau is not None:
+                    plateau, x, y, rotation = info_plateau
+                    if x <= souris_x < x + self.TAILLE_TUILE and y <= souris_y < y + self.TAILLE_TUILE:
+                        self.plateau_selectionne = self.petits_plateaux.index(plateau)
+                        self.position_selection = (souris_x, souris_y)
+                        self.plateaux_places[idx] = None
                         break
     
-    def handle_mouse_up(self, pos):
-        # Only handle in edit mode
-        if not self.edit_mode:
+    def gerer_souris_relache(self, pos):
+        # Gérer uniquement en mode édition
+        if not self.mode_edition:
             return
             
-        if self.selected_board is not None:
-            mouse_x, mouse_y = pos
+        if self.plateau_selectionne is not None:
+            souris_x, souris_y = pos
             
-            if mouse_x < self.GAME_WIDTH:  # Only place if in game area
-                grid_x = mouse_x // self.TILE_SIZE
-                grid_y = mouse_y // self.TILE_SIZE
+            if souris_x < self.LARGEUR_JEU:  # Placer uniquement dans la zone de jeu
+                grille_x = souris_x // self.TAILLE_TUILE
+                grille_y = souris_y // self.TAILLE_TUILE
                 
-                if 0 <= grid_x < self.GRID_SIZE and 0 <= grid_y < self.GRID_SIZE:
-                    target_index = grid_y * self.GRID_SIZE + grid_x
+                if 0 <= grille_x < self.TAILLE_GRILLE and 0 <= grille_y < self.TAILLE_GRILLE:
+                    indice_cible = grille_y * self.TAILLE_GRILLE + grille_x
                     
-                    existing_board_info = self.placed_boards[target_index]
-                    self.placed_boards[target_index] = (
-                        self.small_boards[self.selected_board],
-                        grid_x * self.TILE_SIZE,
-                        grid_y * self.TILE_SIZE,
-                        self.selected_rotation
+                    info_plateau_existant = self.plateaux_places[indice_cible]
+                    self.plateaux_places[indice_cible] = (
+                        self.petits_plateaux[self.plateau_selectionne],
+                        grille_x * self.TAILLE_TUILE,
+                        grille_y * self.TAILLE_TUILE,
+                        self.rotation_selection
                     )
                     
-                    if existing_board_info is not None:
-                        old_board, _, _, old_rotation = existing_board_info
-                        self.selected_board = self.small_boards.index(old_board)
-                        self.selected_rotation = old_rotation
-                        self.selected_position = (mouse_x, mouse_y)
+                    if info_plateau_existant is not None:
+                        ancien_plateau, _, _, ancienne_rotation = info_plateau_existant
+                        self.plateau_selectionne = self.petits_plateaux.index(ancien_plateau)
+                        self.rotation_selection = ancienne_rotation
+                        self.position_selection = (souris_x, souris_y)
                     else:
-                        self.selected_board = None
-                        self.selected_position = None
+                        self.plateau_selectionne = None
+                        self.position_selection = None
     
-    def handle_key_down(self, key):
-        # Only handle in edit mode
-        if not self.edit_mode:
+    def gerer_touche_appui(self, touche):
+        # Gérer uniquement en mode édition
+        if not self.mode_edition:
             return
             
-        if self.selected_board is not None:
-            if key == pygame.K_r:  # Rotate the board
-                self.selected_rotation = (self.selected_rotation + 90) % 360
+        if self.plateau_selectionne is not None:
+            if touche == pygame.K_r:  # Faire tourner le plateau
+                self.rotation_selection = (self.rotation_selection + 90) % 360
     
-    def handle_mouse_motion(self, pos):
-        # Only handle in edit mode
-        if not self.edit_mode:
+    def gerer_souris_mouvement(self, pos):
+        # Gérer uniquement en mode édition
+        if not self.mode_edition:
             return
             
-        if self.selected_board is not None and self.selected_position is not None:
-            self.selected_position = pos
+        if self.plateau_selectionne is not None and self.position_selection is not None:
+            self.position_selection = pos
             
-    def create_combined_board(self):
-        """Create 8x8 combined board from the four 4x4 placed boards"""
-        # Initialize 8x8 board
-        self.combined_board = [[None for _ in range(self.COMBINED_BOARD_SIZE)] for _ in range(self.COMBINED_BOARD_SIZE)]
+    def creer_plateau_combine(self):
+        """Créer un plateau 8x8 combiné à partir des quatre plateaux 4x4 placés"""
+        # Initialiser le plateau 8x8
+        self.plateau_combine = [[None for _ in range(self.TAILLE_PLATEAU_COMBINE)] for _ in range(self.TAILLE_PLATEAU_COMBINE)]
         
-        # Process each placed board
-        for idx, board_info in enumerate(self.placed_boards):
-            if board_info is not None:
-                board, _, _, rotation = board_info
+        # Traiter chaque plateau placé
+        for idx, info_plateau in enumerate(self.plateaux_places):
+            if info_plateau is not None:
+                plateau, _, _, rotation = info_plateau
                 
-                # Calculate position in the large grid
-                grid_x = idx % self.GRID_SIZE
-                grid_y = idx // self.GRID_SIZE
+                # Calculer la position dans la grande grille
+                grille_x = idx % self.TAILLE_GRILLE
+                grille_y = idx // self.TAILLE_GRILLE
                 
-                # Fill the combined board with colors from this small board
-                for small_row in range(self.SMALL_BOARD_SIZE):
-                    for small_col in range(self.SMALL_BOARD_SIZE):
-                        # Get color based on rotation
+                # Remplir le plateau combiné avec les couleurs de ce petit plateau
+                for petite_ligne in range(self.TAILLE_PETIT_PLATEAU):
+                    for petite_colonne in range(self.TAILLE_PETIT_PLATEAU):
+                        # Obtenir la couleur en fonction de la rotation
                         if rotation == 0:
-                            color = board[small_row][small_col]
+                            couleur = plateau[petite_ligne][petite_colonne]
                         elif rotation == 90:
-                            color = board[self.SMALL_BOARD_SIZE - 1 - small_col][small_row]
+                            couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - petite_colonne][petite_ligne]
                         elif rotation == 180:
-                            color = board[self.SMALL_BOARD_SIZE - 1 - small_row][self.SMALL_BOARD_SIZE - 1 - small_col]
+                            couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - petite_ligne][self.TAILLE_PETIT_PLATEAU - 1 - petite_colonne]
                         elif rotation == 270:
-                            color = board[small_col][self.SMALL_BOARD_SIZE - 1 - small_row]
+                            couleur = plateau[petite_colonne][self.TAILLE_PETIT_PLATEAU - 1 - petite_ligne]
                             
-                        # Calculate position in the combined board
-                        combined_row = (grid_y * self.SMALL_BOARD_SIZE) + small_row
-                        combined_col = (grid_x * self.SMALL_BOARD_SIZE) + small_col
+                        # Calculer la position dans le plateau combiné
+                        ligne_combinee = (grille_y * self.TAILLE_PETIT_PLATEAU) + petite_ligne
+                        colonne_combinee = (grille_x * self.TAILLE_PETIT_PLATEAU) + petite_colonne
                         
-                        # Set the color
-                        self.combined_board[combined_row][combined_col] = color
+                        # Définir la couleur
+                        self.plateau_combine[ligne_combinee][colonne_combinee] = couleur
     
-    def draw(self):
-        self.screen.fill(self.BLACK)
+    def dessiner(self):
+        self.ecran.fill(self.NOIR)
         
-        if self.edit_mode:
-            # Draw the game area
-            self.draw_large_board()
+        if self.mode_edition:
+            # Dessiner la zone de jeu
+            self.dessiner_grand_plateau()
             
-            # Draw placed small boards
-            for idx, board_info in enumerate(self.placed_boards):
-                if board_info is not None:
-                    board, x, y, rotation = board_info
-                    self.draw_small_board(board, x, y, rotation)
+            # Dessiner les petits plateaux placés
+            for idx, info_plateau in enumerate(self.plateaux_places):
+                if info_plateau is not None:
+                    plateau, x, y, rotation = info_plateau
+                    self.dessiner_petit_plateau(plateau, x, y, rotation)
             
-            # Draw the currently dragged board
-            if self.selected_board is not None and self.selected_position is not None:
-                mouse_x, mouse_y = self.selected_position
-                self.draw_small_board(self.small_boards[self.selected_board], 
-                                  mouse_x - self.SMALL_TILE_SIZE * 2,
-                                  mouse_y - self.SMALL_TILE_SIZE * 2,
-                                  self.selected_rotation)
+            # Dessiner le plateau actuellement déplacé
+            if self.plateau_selectionne is not None and self.position_selection is not None:
+                souris_x, souris_y = self.position_selection
+                self.dessiner_petit_plateau(self.petits_plateaux[self.plateau_selectionne], 
+                                  souris_x - self.TAILLE_PETITE_TUILE * 2,
+                                  souris_y - self.TAILLE_PETITE_TUILE * 2,
+                                  self.rotation_selection)
         else:
-            # Draw the combined board
-            if self.combined_board:
-                self.draw_combined_board()
+            # Dessiner le plateau combiné
+            if self.plateau_combine:
+                self.dessiner_plateau_combine()
         
-        # Draw the editor panel (always)
-        self.draw_editor_panel()
+        # Dessiner le panneau d'édition (toujours)
+        self.dessiner_panneau_edition()
         
         pygame.display.flip()
         
-    def draw_combined_board(self):
-        # Draw the 8x8 combined board
-        cell_size = self.GAME_WIDTH // self.COMBINED_BOARD_SIZE
+    def dessiner_plateau_combine(self):
+        # Dessiner le plateau combiné 8x8
+        taille_cellule = self.LARGEUR_JEU // self.TAILLE_PLATEAU_COMBINE
         
-        for row in range(self.COMBINED_BOARD_SIZE):
-            for col in range(self.COMBINED_BOARD_SIZE):
-                color = self.combined_board[row][col]
+        for ligne in range(self.TAILLE_PLATEAU_COMBINE):
+            for colonne in range(self.TAILLE_PLATEAU_COMBINE):
+                couleur = self.plateau_combine[ligne][colonne]
                 
-                if color:
+                if couleur:
                     rect = pygame.Rect(
-                        col * cell_size, 
-                        row * cell_size, 
-                        cell_size, 
-                        cell_size
+                        colonne * taille_cellule, 
+                        ligne * taille_cellule, 
+                        taille_cellule, 
+                        taille_cellule
                     )
-                    pygame.draw.rect(self.screen, color, rect)
-                    pygame.draw.rect(self.screen, self.WHITE, rect, 1)
+                    pygame.draw.rect(self.ecran, couleur, rect)
+                    pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
     
-    def run(self):
-        running = True
-        clock = pygame.time.Clock()
+    def executer(self):
+        en_cours = True
+        horloge = pygame.time.Clock()
         
-        while running:
+        while en_cours:
             try:
-                events = pygame.event.get()
-                for event in events:
-                    if event.type == pygame.QUIT:
-                        running = False
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_ESCAPE:  # Exit with Escape key
-                            running = False
+                evenements = pygame.event.get()
+                for evenement in evenements:
+                    if evenement.type == pygame.QUIT:
+                        en_cours = False
+                    elif evenement.type == pygame.KEYDOWN:
+                        if evenement.key == pygame.K_ESCAPE:  # Quitter avec la touche Échap
+                            en_cours = False
                         else:
-                            self.handle_key_down(event.key)
-                    elif event.type == pygame.MOUSEBUTTONDOWN:
-                        self.handle_mouse_down(event.pos)
-                    elif event.type == pygame.MOUSEBUTTONUP:
-                        self.handle_mouse_up(event.pos)
-                    elif event.type == pygame.MOUSEMOTION:
-                        self.handle_mouse_motion(event.pos)
+                            self.gerer_touche_appui(evenement.key)
+                    elif evenement.type == pygame.MOUSEBUTTONDOWN:
+                        self.gerer_souris_appui(evenement.pos)
+                    elif evenement.type == pygame.MOUSEBUTTONUP:
+                        self.gerer_souris_relache(evenement.pos)
+                    elif evenement.type == pygame.MOUSEMOTION:
+                        self.gerer_souris_mouvement(evenement.pos)
             
             except Exception as e:
-                print(f"Unhandled exception: {e}")
+                print(f"Exception non gérée: {e}")
                 pygame.event.clear()
             
-            self.draw()
-            clock.tick(60)  # Limit to 60 FPS
+            self.dessiner()
+            horloge.tick(60)  # Limiter à 60 FPS
         
         pygame.quit()
         sys.exit()
 
-# Main entry point
+# Point d'entrée principal
 if __name__ == "__main__":
-    game = BoardGame()
-    game.run()
+    jeu = JeuDePlateau()
+    jeu.executer()
