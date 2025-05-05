@@ -16,7 +16,7 @@ class JeuDePlateau:
         
         # Dimensions de l'écran
         self.LARGEUR_JEU = 800     # Largeur originale de la zone de jeu
-        self.LARGEUR_PANNEAU = 300  # Largeur du panneau d'édition
+        self.LARGEUR_PANNEAU = 400  # Largeur du panneau d'édition
         self.LARGEUR_ECRAN = self.LARGEUR_JEU + self.LARGEUR_PANNEAU # Largeur augmentée pour le panneau latéral
         self.HAUTEUR_ECRAN = 800
         
