@@ -7,9 +7,19 @@ class EditeurPlateau4x4:
     def __init__(self):
         pygame.init()
         
-        # Dimensions de l'écran
-        self.LARGEUR = 2560
-        self.HAUTEUR = 1440
+        # Obtenir la résolution de l'écran
+        info = pygame.display.Info()
+        self.LARGEUR = info.current_w
+        self.HAUTEUR = info.current_h
+        
+        # Calcul des ratios d'échelle basé sur 2560x1440
+        self.RATIO_X = self.LARGEUR / 2560
+        self.RATIO_Y = self.HAUTEUR / 1440
+        
+        # Taille de base des éléments
+        self.TAILLE_BASE_CASE = 280
+        self.TAILLE_BASE_BOUTON = 140
+        self.MARGE_BASE = 50
         
         # Couleurs
         self.BLANC = (255, 255, 255)
@@ -19,11 +29,15 @@ class EditeurPlateau4x4:
         self.JAUNE = (235, 226, 56)
         self.VERT = (24, 181, 87)
         
-        # Configuration du plateau
+        # Configuration du plateau adaptée
         self.TAILLE_PLATEAU = 4
-        self.TAILLE_CASE = 280
+        self.TAILLE_CASE = int(self.TAILLE_BASE_CASE * min(self.RATIO_X, self.RATIO_Y))
         self.couleurs_disponibles = [self.ROUGE, self.BLEU, self.JAUNE, self.VERT]
         self.couleur_selectionnee = self.ROUGE
+        
+        # Position du plateau (centrée)
+        self.plateau_x = int(self.LARGEUR * 0.28)
+        self.plateau_y = int(self.HAUTEUR * 0.11)
         
         # Initialisation de l'écran
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
@@ -33,12 +47,8 @@ class EditeurPlateau4x4:
         self.plateau = [[self.NOIR for _ in range(self.TAILLE_PLATEAU)] 
                        for _ in range(self.TAILLE_PLATEAU)]
         
-        # Position du plateau
-        self.plateau_x = 720
-        self.plateau_y = 160
-        
         # État de l'interface
-        self.mode = "editeur"  # "editeur" ou "selection"
+        self.mode = "editeur"
         self.plateaux_sauvegardes = []
         self.boutons_plateaux = []
         
@@ -47,87 +57,102 @@ class EditeurPlateau4x4:
 
     def _creer_boutons(self):
         boutons = {}
-        x_couleur = 360
-        y_couleur = 450
+        
+        # Calcul des dimensions adaptées
+        taille_bouton_couleur = int(self.TAILLE_BASE_BOUTON * min(self.RATIO_X, self.RATIO_Y))
+        espace_couleur = int(150 * self.RATIO_Y)
+        x_couleur = int(360 * self.RATIO_X)
+        y_couleur = int(450 * self.RATIO_Y)
         
         # Boutons de couleurs
         for i, couleur in enumerate(self.couleurs_disponibles):
             boutons[f"couleur_{i}"] = {
-                "rect": pygame.Rect(x_couleur, y_couleur + i*150, 140, 140),
+                "rect": pygame.Rect(x_couleur, y_couleur + i*espace_couleur,
+                                  taille_bouton_couleur, taille_bouton_couleur),
                 "couleur": couleur,
                 "action": "select_color"
             }
         
-        # Bouton Sauvegarder
-        boutons["sauvegarder"] = {
-            "rect": pygame.Rect(2088, 550, 225, 60),
-            "couleur": self.VERT,
-            "texte": "Sauvegarder",
-            "action": "save"
-        }
+        # Boutons d'action
+        largeur_bouton = int(225 * self.RATIO_X)
+        hauteur_bouton = int(60 * self.RATIO_Y)
+        x_action = int(self.LARGEUR * 0.815)  # ~2088/2560
         
-        # Bouton Charger
-        boutons["charger"] = {
-            "rect": pygame.Rect(2088, 690, 225, 60),
-            "couleur": self.BLEU,
-            "texte": "Charger",
-            "action": "load"
-        }
+        boutons_actions = [
+            ("sauvegarder", self.VERT, "Sauvegarder", "save", 550),
+            ("charger", self.BLEU, "Charger", "load", 690),
+            ("effacer", self.ROUGE, "Effacer tout", "clear", 830)
+        ]
         
-        # Bouton Effacer
-        boutons["effacer"] = {
-            "rect": pygame.Rect(2088, 830, 225, 60),
-            "couleur": self.ROUGE,
-            "texte": "Effacer tout",
-            "action": "clear"
-        }
+        for nom, couleur, texte, action, y in boutons_actions:
+            boutons[nom] = {
+                "rect": pygame.Rect(x_action, int(y * self.RATIO_Y),
+                                  largeur_bouton, hauteur_bouton),
+                "couleur": couleur,
+                "texte": texte,
+                "action": action
+            }
         
         return boutons
 
     def charger_liste_plateaux(self):
         self.plateaux_sauvegardes = []
         self.boutons_plateaux = []
-        y_pos = 100
+        y_pos = int(100 * self.RATIO_Y)
         
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
             
         for fichier in os.listdir("plateaux"):
             if fichier.endswith('.json'):
-                rect = pygame.Rect(50, y_pos, 700, 60)
+                rect = pygame.Rect(
+                    int(50 * self.RATIO_X),
+                    y_pos,
+                    int(700 * self.RATIO_X),
+                    int(60 * self.RATIO_Y)
+                )
                 self.plateaux_sauvegardes.append(fichier)
                 self.boutons_plateaux.append(rect)
-                y_pos += 80
+                y_pos += int(80 * self.RATIO_Y)
 
     def dessiner_ecran_selection(self):
         self.ecran.fill(self.NOIR)
         
         # Titre
-        police = pygame.font.Font(None, 48)
+        police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
         titre = police.render("Sélectionnez un plateau", True, self.BLANC)
-        self.ecran.blit(titre, (50, 30))
+        self.ecran.blit(titre, (int(50 * self.RATIO_X), int(30 * self.RATIO_Y)))
 
         # Dessiner les plateaux sauvegardés
         if not self.plateaux_sauvegardes:
             texte = police.render("Aucun plateau sauvegardé", True, self.BLANC)
-            self.ecran.blit(texte, (50, 100))
+            self.ecran.blit(texte, (int(50 * self.RATIO_X), int(100 * self.RATIO_Y)))
         else:
-            police = pygame.font.Font(None, 36)
+            police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
             for idx, fichier in enumerate(self.plateaux_sauvegardes):
                 rect = self.boutons_plateaux[idx]
                 pygame.draw.rect(self.ecran, self.BLEU, rect)
                 pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
                 
                 texte = police.render(fichier, True, self.BLANC)
-                self.ecran.blit(texte, (rect.x + 20, rect.y + 20))
+                self.ecran.blit(texte, (rect.x + int(20 * self.RATIO_X), rect.y + int(20 * self.RATIO_Y)))
 
         # Bouton retour
-        retour_rect = pygame.Rect(50, self.HAUTEUR - 70, 200, 50)
+        retour_rect = pygame.Rect(
+            int(50 * self.RATIO_X),
+            self.HAUTEUR - int(70 * self.RATIO_Y),
+            int(200 * self.RATIO_X),
+            int(50 * self.RATIO_Y)
+        )
         pygame.draw.rect(self.ecran, self.ROUGE, retour_rect)
         pygame.draw.rect(self.ecran, self.BLANC, retour_rect, 2)
-        police = pygame.font.Font(None, 36)
+        
+        police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
         texte = police.render("Retour", True, self.BLANC)
-        self.ecran.blit(texte, (110, self.HAUTEUR - 55))
+        self.ecran.blit(texte, (
+            retour_rect.x + int(60 * self.RATIO_X),
+            retour_rect.y + int(15 * self.RATIO_Y)
+        ))
         
         return retour_rect
 
@@ -150,11 +175,27 @@ class EditeurPlateau4x4:
             pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
             
             if "texte" in info_bouton:
-                police = pygame.font.Font(None, 30)
+                police = pygame.font.Font(None, int(30 * min(self.RATIO_X, self.RATIO_Y)))
                 texte = police.render(info_bouton["texte"], True, self.BLANC)
                 rect_texte = texte.get_rect(center=info_bouton["rect"].center)
                 self.ecran.blit(texte, rect_texte)
+        
+        menu_rect = pygame.Rect(
+            int(50 * self.RATIO_X),
+            self.HAUTEUR - int(70 * self.RATIO_Y),
+            int(200 * self.RATIO_X),
+            int(50 * self.RATIO_Y)
+        )
+        
+        pygame.draw.rect(self.ecran, self.ROUGE, menu_rect)
+        pygame.draw.rect(self.ecran, self.BLANC, menu_rect, 2)
+        
+        police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
+        texte = police.render("<- Menu ", True, self.BLANC)
+        rect_texte = texte.get_rect(center=menu_rect.center)
+        self.ecran.blit(texte, rect_texte)
 
+    # Les autres méthodes restent identiques car elles utilisent déjà les variables adaptatives
     def sauvegarder_plateau(self):
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
@@ -191,6 +232,15 @@ class EditeurPlateau4x4:
                     x, y = event.pos
                     
                     if self.mode == "editeur":
+                        menu_rect = pygame.Rect(
+                            int(50 * self.RATIO_X),
+                            self.HAUTEUR - int(70 * self.RATIO_Y),
+                            int(200 * self.RATIO_X),
+                            int(50 * self.RATIO_Y)
+                        )
+                        if menu_rect.collidepoint(x, y):
+                            return
+                            
                         # Vérifier les clics sur le plateau
                         if (self.plateau_x <= x < self.plateau_x + self.TAILLE_PLATEAU * self.TAILLE_CASE and
                             self.plateau_y <= y < self.plateau_y + self.TAILLE_PLATEAU * self.TAILLE_CASE):
@@ -214,7 +264,12 @@ class EditeurPlateau4x4:
                     
                     elif self.mode == "selection":
                         # Vérifier le clic sur le bouton retour
-                        retour_rect = pygame.Rect(50, self.HAUTEUR - 70, 200, 50)
+                        retour_rect = pygame.Rect(
+                            int(50 * self.RATIO_X),
+                            self.HAUTEUR - int(70 * self.RATIO_Y),
+                            int(200 * self.RATIO_X),
+                            int(50 * self.RATIO_Y)
+                        )
                         if retour_rect.collidepoint(x, y):
                             self.mode = "editeur"
                         
