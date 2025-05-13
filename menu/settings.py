@@ -52,7 +52,7 @@ class Settings:
         
         boutons_config = [
             ("720", self.VERT, "720"),
-            ("1080", self.BLEU, "Diffi1080culté"),
+            ("1080", self.BLEU, "1080"),
             ("1440", self.JAUNE, "1440")
         ]
         
