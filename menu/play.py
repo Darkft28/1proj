@@ -1,11 +1,6 @@
 import pygame
-import sys
-import os
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
 
-class Menu:
+class Play:
     def __init__(self):
         pygame.init()
         
@@ -33,10 +28,18 @@ class Menu:
         
         # Initialisation de l'écran
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-        pygame.display.set_caption("Menu Principal")
+        pygame.display.set_caption("Choix du jeu")
         
         # Créer les boutons
         self.boutons = self._creer_boutons()
+        
+        # Bouton retour
+        self.bouton_retour = {
+            "rect": pygame.Rect(int(50 * self.RATIO_X), int(50 * self.RATIO_Y), 
+                               int(200 * self.RATIO_X), int(60 * self.RATIO_Y)),
+            "couleur": self.ROUGE,
+            "texte": "Retour"
+        }
         
     def _creer_boutons(self):
         boutons = {}
@@ -46,9 +49,9 @@ class Menu:
         y_debut = self.HAUTEUR // 2 - (3 * self.HAUTEUR_BOUTON + 2 * self.ESPACE_BOUTONS) // 2
         
         boutons_config = [
-            ("jouer", self.VERT, "Jouer"),
-            ("editeur", self.BLEU, "Créer votre quadrant"),
-            ("parametres", self.JAUNE, "Paramètres")
+            ("Katarenga", self.VERT, "Katarenga"),
+            ("Isolation", self.BLEU, "Isolation"),
+            ("Congress", self.JAUNE, "Congress")
         ]
         
         for i, (nom, couleur, texte) in enumerate(boutons_config):
@@ -67,11 +70,11 @@ class Menu:
         
         # Titre
         police_titre = pygame.font.Font(None, int(72 * min(self.RATIO_X, self.RATIO_Y)))
-        titre = police_titre.render("1Proj", True, self.BLANC)
+        titre = police_titre.render("Choix du jeu", True, self.BLANC)
         rect_titre = titre.get_rect(center=(self.LARGEUR//2, int(200 * self.RATIO_Y)))
         self.ecran.blit(titre, rect_titre)
         
-        # Dessiner les boutons
+        # Dessiner les boutons de paramètres
         police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
         for info_bouton in self.boutons.values():
             # Dessiner le fond du bouton
@@ -82,6 +85,14 @@ class Menu:
             texte = police.render(info_bouton["texte"], True, self.BLANC)
             rect_texte = texte.get_rect(center=info_bouton["rect"].center)
             self.ecran.blit(texte, rect_texte)
+        
+        # Dessiner le bouton retour
+        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"])
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2)
+        
+        texte_retour = police.render(self.bouton_retour["texte"], True, self.BLANC)
+        rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
+        self.ecran.blit(texte_retour, rect_texte_retour)
     
     def executer(self):
         en_cours = True
@@ -93,36 +104,28 @@ class Menu:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
                     
+                    # Vérifier le clic sur le bouton retour
+                    if self.bouton_retour["rect"].collidepoint(x, y):
+                        en_cours = False
+                    
+                    # Vérifier les clics sur les boutons de paramètres
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
-                            if nom == "editeur":
-                                # Import modifié pour utiliser le chemin correct
-                                from Board.editeur_board import EditeurPlateau4x4
-                                editeur = EditeurPlateau4x4()
-                                editeur.executer()
-                                self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-                                pygame.display.set_caption("Menu Principal")
-                            elif nom == "jouer":
-                                print("Lancer le jeu")
-                                from menu.play import Play
-                                start = Play()
-                                start.executer()
-                                self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-                                pygame.display.set_caption("Choix du mode de jeu")
-                            elif nom == "parametres":
-                                print("Ouvrir les paramètres")
-                                from menu.settings import Settings
-                                settings = Settings()
-                                settings.executer()
-                                self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-                                pygame.display.set_caption("Paramètres")
+                            if nom == "Katarenga":
+                                print("résolution 720 sélectionnée")
+                                # TODO: 
+                            elif nom == "Isolation":
+                                print("résolution 1080 sélectionnée")
+                                # TODO: 
+                            elif nom == "Congress":
+                                print("résolution 1440 sélectionnée")
+                                # TODO: 
             
             self.dessiner()
             pygame.display.flip()
         
-        pygame.quit()
-        sys.exit()
+        # Retourne au menu principal sans quitter le jeu
 
 if __name__ == "__main__":
-    menu = Menu()
-    menu.executer()
+    start = Play()
+    start.executer()
