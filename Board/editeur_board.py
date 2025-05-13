@@ -170,9 +170,25 @@ class EditeurPlateau4x4:
                 pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
         
         # Dessiner les boutons
-        for info_bouton in self.boutons.values():
+        for key, info_bouton in self.boutons.items():
             pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"])
             pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
+            
+            # Mettre en évidence la couleur sélectionnée
+            if info_bouton["action"] == "select_color" and info_bouton["couleur"] == self.couleur_selectionnee:
+                pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 4)
+                
+                
+                triangle_size = int(30 * min(self.RATIO_X, self.RATIO_Y))
+                triangle_x = info_bouton["rect"].x - triangle_size - 10
+                triangle_y = info_bouton["rect"].centery
+                
+                points = [
+                    (triangle_x, triangle_y - triangle_size//2),
+                    (triangle_x, triangle_y + triangle_size//2),
+                    (triangle_x + triangle_size, triangle_y)
+                ]
+                pygame.draw.polygon(self.ecran, self.BLANC, points)
             
             if "texte" in info_bouton:
                 police = pygame.font.Font(None, int(30 * min(self.RATIO_X, self.RATIO_Y)))
@@ -208,6 +224,18 @@ class EditeurPlateau4x4:
                               for ligne in self.plateau]
                 json.dump(plateau_save, f)
             print(f"Plateau sauvegardé sous {nom_fichier}!")
+            
+            # Ajouter un effet visuel temporaire pour montrer que la sauvegarde est effectuée
+            bouton = self.boutons["sauvegarder"]
+            couleur_origine = bouton["couleur"]
+            
+            # Mettre en évidence le bouton
+            pygame.draw.rect(self.ecran, self.BLANC, bouton["rect"], 4)
+            pygame.display.flip()
+            
+            # Pause brève pour que l'effet soit visible
+            pygame.time.delay(300)
+            
         except Exception as e:
             print(f"Erreur lors de la sauvegarde: {e}")
 
