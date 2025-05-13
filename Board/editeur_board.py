@@ -5,6 +5,7 @@ import os
 
 class EditeurPlateau4x4:
     def __init__(self):
+        # Initialiser Pygame
         pygame.init()
         
         # Obtenir la résolution de l'écran
@@ -39,13 +40,28 @@ class EditeurPlateau4x4:
         self.plateau_x = int(self.LARGEUR * 0.28)
         self.plateau_y = int(self.HAUTEUR * 0.11)
         
-        # Initialisation de l'écran
+        # Initialisation de l'écran - DÉPLACÉ ICI
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
         pygame.display.set_caption("Éditeur de Plateau 4x4")
         
+        # Chargement des images - DÉPLACÉ APRÈS L'INITIALISATION DE L'ÉCRAN
+        self.images = {}
+        try:
+            image_paths = {
+                self.ROUGE: "assets/image_rouge.png",
+                self.BLEU: "assets/image_bleue.png",
+                self.JAUNE: "assets/image_jaune.png",
+                self.VERT: "assets/image_verte.png"
+            }
+            for couleur, path in image_paths.items():
+                self.images[couleur] = pygame.image.load(path).convert_alpha()
+        except pygame.error as e:
+            print(f"Erreur lors du chargement des images: {e}")
+            sys.exit(1)
+        
         # Création du plateau vide
         self.plateau = [[self.NOIR for _ in range(self.TAILLE_PLATEAU)] 
-                       for _ in range(self.TAILLE_PLATEAU)]
+                    for _ in range(self.TAILLE_PLATEAU)]
         
         # État de l'interface
         self.mode = "editeur"
@@ -166,22 +182,47 @@ class EditeurPlateau4x4:
                 y = self.plateau_y + ligne * self.TAILLE_CASE
                 
                 rect = pygame.Rect(x, y, self.TAILLE_CASE, self.TAILLE_CASE)
-                pygame.draw.rect(self.ecran, self.plateau[ligne][colonne], rect)
+                couleur = self.plateau[ligne][colonne]
+                
+                # Draw background
+                pygame.draw.rect(self.ecran, self.NOIR, rect)
+                
+                # Draw image if available, otherwise use color
+                if couleur in self.images:
+                    image = pygame.transform.scale(self.images[couleur], 
+                                                (self.TAILLE_CASE, self.TAILLE_CASE))
+                    self.ecran.blit(image, rect)
+                else:
+                    pygame.draw.rect(self.ecran, couleur, rect)
+                
                 pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
         
         # Dessiner les boutons
         for key, info_bouton in self.boutons.items():
-            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"])
-            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
+            rect = info_bouton["rect"]
+            couleur = info_bouton["couleur"]
             
-            # Mettre en évidence la couleur sélectionnée
-            if info_bouton["action"] == "select_color" and info_bouton["couleur"] == self.couleur_selectionnee:
-                pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 4)
-                
+            # Draw button background
+            pygame.draw.rect(self.ecran, self.NOIR, rect)
+            
+            # For color selection buttons, draw the image if available
+            if info_bouton["action"] == "select_color" and couleur in self.images:
+                image = pygame.transform.scale(self.images[couleur], 
+                                            (rect.width, rect.height))
+                self.ecran.blit(image, rect)
+            else:
+                pygame.draw.rect(self.ecran, couleur, rect)
+            
+            pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
+            
+            # Highlight selected color
+            if (info_bouton["action"] == "select_color" and 
+                info_bouton["couleur"] == self.couleur_selectionnee):
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 4)
                 
                 triangle_size = int(30 * min(self.RATIO_X, self.RATIO_Y))
-                triangle_x = info_bouton["rect"].x - triangle_size - 10
-                triangle_y = info_bouton["rect"].centery
+                triangle_x = rect.x - triangle_size - 10
+                triangle_y = rect.centery
                 
                 points = [
                     (triangle_x, triangle_y - triangle_size//2),
@@ -190,10 +231,11 @@ class EditeurPlateau4x4:
                 ]
                 pygame.draw.polygon(self.ecran, self.BLANC, points)
             
+            # Draw button text if present
             if "texte" in info_bouton:
                 police = pygame.font.Font(None, int(30 * min(self.RATIO_X, self.RATIO_Y)))
                 texte = police.render(info_bouton["texte"], True, self.BLANC)
-                rect_texte = texte.get_rect(center=info_bouton["rect"].center)
+                rect_texte = texte.get_rect(center=rect.center)
                 self.ecran.blit(texte, rect_texte)
         
         menu_rect = pygame.Rect(
@@ -217,23 +259,36 @@ class EditeurPlateau4x4:
             os.makedirs("plateaux")
             
         try:
+            # Créer un dictionnaire inverse pour obtenir les chemins d'images depuis les couleurs
+            couleur_vers_image = {
+                self.ROUGE: "assets/image_rouge.png",
+                self.BLEU: "assets/image_bleue.png",
+                self.JAUNE: "assets/image_jaune.png",
+                self.VERT: "assets/image_verte.png"
+            }
+            
+            # Convertir le plateau en chemins d'images
+            plateau_images = []
+            for ligne in self.plateau:
+                ligne_images = []
+                for couleur in ligne:
+                    if couleur == self.NOIR:
+                        ligne_images.append(None)  # Case vide
+                    else:
+                        ligne_images.append(couleur_vers_image.get(couleur, None))
+                plateau_images.append(ligne_images)
+            
+            # Sauvegarder dans un fichier JSON
             num = len([f for f in os.listdir("plateaux") if f.endswith('.json')])
             nom_fichier = f"plateaux/plateau_{num}.json"
             with open(nom_fichier, 'w') as f:
-                plateau_save = [[(c[0], c[1], c[2]) for c in ligne] 
-                              for ligne in self.plateau]
-                json.dump(plateau_save, f)
+                json.dump(plateau_images, f)
             print(f"Plateau sauvegardé sous {nom_fichier}!")
             
-            # Ajouter un effet visuel temporaire pour montrer que la sauvegarde est effectuée
+            # Effet visuel de confirmation
             bouton = self.boutons["sauvegarder"]
-            couleur_origine = bouton["couleur"]
-            
-            # Mettre en évidence le bouton
             pygame.draw.rect(self.ecran, self.BLANC, bouton["rect"], 4)
             pygame.display.flip()
-            
-            # Pause brève pour que l'effet soit visible
             pygame.time.delay(300)
             
         except Exception as e:
@@ -241,10 +296,28 @@ class EditeurPlateau4x4:
 
     def charger_plateau(self, nom_fichier):
         try:
+            # Dictionnaire pour convertir les chemins d'images en couleurs
+            image_vers_couleur = {
+                "assets/image_rouge.png": self.ROUGE,
+                "assets/image_bleue.png": self.BLEU,
+                "assets/image_jaune.png": self.JAUNE,
+                "assets/image_verte.png": self.VERT
+            }
+            
             with open(f"plateaux/{nom_fichier}", 'r') as f:
-                plateau_load = json.load(f)
-                self.plateau = [[tuple(c) for c in ligne] 
-                              for ligne in plateau_load]
+                plateau_images = json.load(f)
+                
+                # Convertir les chemins d'images en couleurs
+                self.plateau = []
+                for ligne in plateau_images:
+                    ligne_couleurs = []
+                    for chemin in ligne:
+                        if chemin is None:
+                            ligne_couleurs.append(self.NOIR)  # Case vide
+                        else:
+                            ligne_couleurs.append(image_vers_couleur.get(chemin, self.NOIR))
+                    self.plateau.append(ligne_couleurs)
+                    
             print("Plateau chargé avec succès!")
         except Exception as e:
             print(f"Erreur lors du chargement: {e}")
