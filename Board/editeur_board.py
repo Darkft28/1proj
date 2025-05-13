@@ -140,7 +140,7 @@ class EditeurPlateau4x4:
         # Bouton retour
         retour_rect = pygame.Rect(
             int(50 * self.RATIO_X),
-            self.HAUTEUR - int(70 * self.RATIO_Y),
+            int(50 * self.RATIO_Y),
             int(200 * self.RATIO_X),
             int(50 * self.RATIO_Y)
         )
@@ -198,7 +198,7 @@ class EditeurPlateau4x4:
         
         menu_rect = pygame.Rect(
             int(50 * self.RATIO_X),
-            self.HAUTEUR - int(70 * self.RATIO_Y),
+            int(50 * self.RATIO_Y),
             int(200 * self.RATIO_X),
             int(50 * self.RATIO_Y)
         )
@@ -207,7 +207,7 @@ class EditeurPlateau4x4:
         pygame.draw.rect(self.ecran, self.BLANC, menu_rect, 2)
         
         police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
-        texte = police.render("<- Menu ", True, self.BLANC)
+        texte = police.render("Retour ", True, self.BLANC)
         rect_texte = texte.get_rect(center=menu_rect.center)
         self.ecran.blit(texte, rect_texte)
 
@@ -262,7 +262,7 @@ class EditeurPlateau4x4:
                     if self.mode == "editeur":
                         menu_rect = pygame.Rect(
                             int(50 * self.RATIO_X),
-                            self.HAUTEUR - int(70 * self.RATIO_Y),
+                            int(50 * self.RATIO_Y),
                             int(200 * self.RATIO_X),
                             int(50 * self.RATIO_Y)
                         )
@@ -294,7 +294,7 @@ class EditeurPlateau4x4:
                         # Vérifier le clic sur le bouton retour
                         retour_rect = pygame.Rect(
                             int(50 * self.RATIO_X),
-                            self.HAUTEUR - int(70 * self.RATIO_Y),
+                            int(50 * self.RATIO_Y),
                             int(200 * self.RATIO_X),
                             int(50 * self.RATIO_Y)
                         )
