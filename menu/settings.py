@@ -51,9 +51,9 @@ class Settings:
         y_debut = self.HAUTEUR // 2 - (3 * self.HAUTEUR_BOUTON + 2 * self.ESPACE_BOUTONS) // 2
         
         boutons_config = [
-            ("son", self.VERT, "Son"),
-            ("difficulte", self.BLEU, "Difficulté"),
-            ("controles", self.JAUNE, "Contrôles")
+            ("720", self.VERT, "720"),
+            ("1080", self.BLEU, "Diffi1080culté"),
+            ("1440", self.JAUNE, "1440")
         ]
         
         for i, (nom, couleur, texte) in enumerate(boutons_config):
@@ -113,15 +113,15 @@ class Settings:
                     # Vérifier les clics sur les boutons de paramètres
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
-                            if nom == "son":
-                                print("Paramètres de son sélectionnés")
-                                # TODO: Ajouter la logique pour les paramètres de son
-                            elif nom == "difficulte":
-                                print("Paramètres de difficulté sélectionnés")
-                                # TODO: Ajouter la logique pour les paramètres de difficulté
-                            elif nom == "controles":
-                                print("Paramètres de contrôles sélectionnés")
-                                # TODO: Ajouter la logique pour les paramètres de contrôles
+                            if nom == "720":
+                                print("résolution 720 sélectionnée")
+                                # TODO: 
+                            elif nom == "1080":
+                                print("résolution 1080 sélectionnée")
+                                # TODO: 
+                            elif nom == "1440":
+                                print("résolution 1440 sélectionnée")
+                                # TODO: 
             
             self.dessiner()
             pygame.display.flip()
