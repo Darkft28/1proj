@@ -112,8 +112,11 @@ class Menu:
                             elif nom == "parametres":
                                 print("Ouvrir les paramètres")
                                 from menu.settings import Settings
-                                settings = Settings()
+                                settings = Settings(self.LARGEUR, self.HAUTEUR)
                                 settings.executer()
+                                nouvelle_largeur, nouvelle_hauteur = settings.get_resolution()
+                                self.LARGEUR = nouvelle_largeur
+                                self.HAUTEUR = nouvelle_hauteur
                                 self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
                                 pygame.display.set_caption("Paramètres")
             

@@ -1,13 +1,14 @@
 import pygame
 
 class Settings:
-    def __init__(self):
+    def __init__(self, largeur=None, hauteur=None):
         pygame.init()
         
+        self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
         # Obtenir la résolution de l'écran
         info = pygame.display.Info()
-        self.LARGEUR = info.current_w
-        self.HAUTEUR = info.current_h
+        self.LARGEUR = largeur if largeur is not None else info.current_w
+        self.HAUTEUR = hauteur if hauteur is not None else info.current_h
         
         # Calcul des ratios d'échelle basé sur 2560x1440
         self.RATIO_X = self.LARGEUR / 2560
@@ -28,22 +29,22 @@ class Settings:
         self.GRIS_FONCE = (80, 80, 80)
         
         # Configuration des éléments d'interface
-        self.LARGEUR_DROPDOWN = int(400 * self.RATIO_X)
-        self.HAUTEUR_DROPDOWN = int(60 * self.RATIO_Y)
-        self.ESPACE_SECTIONS = int(120 * self.RATIO_Y)
+        self.LARGEUR_DROPDOWN = 700
+        self.HAUTEUR_DROPDOWN = 90
+        self.ESPACE_SECTIONS = 150
         
         # Initialisation de l'écran
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
         pygame.display.set_caption("Paramètres")
         
         # Options disponibles pour chaque menu déroulant
-        self.options_resolution = ["720p", "1080p", "1440p", "2160p"]
+        self.options_resolution = ["720p", "1080p", "1440p","1600p", "2160p"]
         self.options_theme = ["Clair", "Sombre", "Bleu", "Rouge"]
-        self.options_langue = ["Français", "English", "Español", "Deutsch"]
+        self.options_langue = ["Francais", "English", "Español", "Deutsch"]
         
         # Options sélectionnées
         self.selected_resolution = 1  # Index par défaut (1080p)
-        self.selected_theme = 1       # Index par défaut (Sombre)
+        self.selected_theme = 0       # Index par défaut (Clair)
         self.selected_langue = 0      # Index par défaut (Français)
         
         # État des menus déroulants (ouvert/fermé)
@@ -58,7 +59,7 @@ class Settings:
         # Bouton retour
         self.bouton_retour = {
             "rect": pygame.Rect(int(50 * self.RATIO_X), int(50 * self.RATIO_Y), 
-                               int(200 * self.RATIO_X), int(60 * self.RATIO_Y)),
+                            120, 40),  # Largeur 120px, hauteur 40px (plus petit)
             "couleur": self.ROUGE,
             "texte": "Retour"
         }
@@ -66,7 +67,7 @@ class Settings:
     def _creer_dropdowns(self):
         """Crée les menus déroulants pour les paramètres"""
         # Calculer les positions verticales pour chaque section
-        y_resolution = int(300 * self.RATIO_Y)
+        y_resolution = int(600 * self.RATIO_Y)
         y_theme = y_resolution + self.ESPACE_SECTIONS
         y_langue = y_theme + self.ESPACE_SECTIONS
 
@@ -76,7 +77,7 @@ class Settings:
         # Créer un dictionnaire pour stocker les informations des menus déroulants
         dropdowns = {
             "resolution": {
-                "titre": "Résolution",
+                "titre": "Resolution",
                 "dropdown_rect": pygame.Rect(x_dropdown, y_resolution, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
                 "options": self.options_resolution,
                 "selected": self.selected_resolution,
@@ -84,7 +85,7 @@ class Settings:
                 "options_rects": []
             },
             "theme": {
-                "titre": "Thème",
+                "titre": "Theme",
                 "dropdown_rect": pygame.Rect(x_dropdown, y_theme, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
                 "options": self.options_theme,
                 "selected": self.selected_theme,
@@ -102,37 +103,38 @@ class Settings:
         }
 
         return dropdowns
-    
+
+
     def dessiner(self):
         # Afficher l'image d'arrière-plan
         self.ecran.blit(self.background_image, (0, 0))
         
-        # Titre principal
-        police_titre = pygame.font.Font(None, int(72 * min(self.RATIO_X, self.RATIO_Y)))
-        titre = police_titre.render("PARAMÈTRES :", True, self.BLANC)
-        rect_titre = titre.get_rect(center=(self.LARGEUR // 2, int(150 * self.RATIO_Y)))
-        self.ecran.blit(titre, rect_titre)
+        # Police personnalisée pour tous les textes
+        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 72)
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 48)
         
-        # Police pour les boutons
-        police_bouton = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+        # Titre principal
+        titre = police_titre.render("PARAMETRES :", True, self.BLANC)
+        rect_titre = titre.get_rect(center=(self.LARGEUR // 2, int(450 * self.RATIO_Y)))
+        self.ecran.blit(titre, rect_titre)
         
         # Dessiner les sections et menus déroulants fermés
         menus_ouverts = []
         for nom, info in self.dropdowns.items():
-            # Texte à afficher dans le bouton (sous-titre + option sélectionnée)
-            texte_bouton = f"{info['titre']} : {info['options'][info['selected']]}"
-            texte_rendu = police_bouton.render(texte_bouton, True, self.BLANC)  # Texte blanc
+            if nom == "resolution":
+                # Affiche la résolution actuelle
+                texte_bouton = f"{info['titre']} : {self.LARGEUR} x {self.HAUTEUR}"
+            else:
+                texte_bouton = f"{info['titre']} : {info['options'][info['selected']]}"
+            texte_rendu = police_bouton.render(texte_bouton, True, self.BLANC)
             
-            # Dessiner le bouton avec des bords arrondis
             rect_bouton = info["dropdown_rect"]
-            pygame.draw.rect(self.ecran, self.GRIS_FONCE, rect_bouton, border_radius=15)  # Fond arrondi
-            pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2, border_radius=15)    # Bordure arrondie
+            pygame.draw.rect(self.ecran, self.GRIS_FONCE, rect_bouton, border_radius=15)
+            pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2, border_radius=15)
             
-            # Centrer le texte dans le bouton
             rect_texte = texte_rendu.get_rect(center=rect_bouton.center)
             self.ecran.blit(texte_rendu, rect_texte)
             
-            # Dessiner la flèche du menu déroulant
             arrow_points = [
                 (rect_bouton.right - int(30 * self.RATIO_X), rect_bouton.centery - int(10 * self.RATIO_Y)),
                 (rect_bouton.right - int(15 * self.RATIO_X), rect_bouton.centery + int(10 * self.RATIO_Y)),
@@ -140,21 +142,53 @@ class Settings:
             ]
             pygame.draw.polygon(self.ecran, self.BLANC, arrow_points)
             
-            # Ajouter les menus ouverts à une liste pour les dessiner en dernier
             if info["ouvert"]:
                 menus_ouverts.append(info)
         
-        # Dessiner le bouton retour
+        # Bouton retour
         pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
         pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
         
-        texte_retour = police_bouton.render(self.bouton_retour["texte"], True, self.BLANC)
+        police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
+        texte_retour = police_retour.render(self.bouton_retour["texte"], True, self.BLANC)
+        rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
+        self.ecran.blit(texte_retour, rect_texte_retour)
+        
+        
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
         self.ecran.blit(texte_retour, rect_texte_retour)
         
         # Dessiner les menus déroulants ouverts en dernier
         for info in menus_ouverts:
             self._dessiner_menu_ouvert(info)
+
+    def _dessiner_menu_ouvert(self, info):
+        """Dessiner les options d'un menu déroulant ouvert."""
+        menu_height = len(info["options_rects"]) * self.HAUTEUR_DROPDOWN
+        menu_width = info["dropdown_rect"].width
+        
+        fond_rect = pygame.Rect(
+            info["dropdown_rect"].x,
+            info["dropdown_rect"].bottom,
+            menu_width,
+            menu_height
+        )
+        pygame.draw.rect(self.ecran, self.GRIS_FONCE, fond_rect, border_radius=15)
+
+        # Police personnalisée pour les options
+        police_options = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 42)
+        
+        for i, option_rect in enumerate(info["options_rects"]):
+            couleur_fond = self.VERT if i == info["selected"] else self.GRIS
+            pygame.draw.rect(self.ecran, couleur_fond, option_rect, border_radius=10)
+            pygame.draw.rect(self.ecran, self.BLANC, option_rect, 2, border_radius=10)
+            
+            texte_option = police_options.render(info["options"][i], True, self.BLANC)
+            rect_texte = texte_option.get_rect(
+                midleft=(option_rect.x + int(20 * self.RATIO_X), option_rect.centery)
+            )
+            self.ecran.blit(texte_option, rect_texte)
+
 
     def _dessiner_menu_ouvert(self, info):
         """Dessiner les options d'un menu déroulant ouvert."""
@@ -219,11 +253,12 @@ class Settings:
                             # Recréer les rectangles pour les options si le menu est ouvert
                             if info["ouvert"]:
                                 info["options_rects"] = []
+                                x_dropdown = (self.LARGEUR - self.LARGEUR_DROPDOWN) // 2  # <-- Ajoute cette ligne ici
                                 for j in range(len(info["options"])):
                                     option_rect = pygame.Rect(
-                                        info["dropdown_rect"].x, 
+                                        x_dropdown,  # <-- Utilise x_dropdown ici
                                         info["dropdown_rect"].bottom + j * self.HAUTEUR_DROPDOWN,
-                                        self.LARGEUR_DROPDOWN, 
+                                        self.LARGEUR_DROPDOWN,
                                         self.HAUTEUR_DROPDOWN
                                     )
                                     info["options_rects"].append(option_rect)
@@ -258,11 +293,11 @@ class Settings:
         # Retourne au menu principal sans quitter le jeu
 
     def _changer_resolution(self, resolution):
-        """Change la résolution de l'écran."""
         resolutions_map = {
             "720p": (1280, 720),
             "1080p": (1920, 1080),
             "1440p": (2560, 1440),
+            "1600p": (2560, 1600),
             "2160p": (3840, 2160)
         }
         if resolution in resolutions_map:
@@ -271,21 +306,20 @@ class Settings:
             self.HAUTEUR = hauteur
             self.RATIO_X = self.LARGEUR / 2560
             self.RATIO_Y = self.HAUTEUR / 1440
-            
+
             # Mettre à jour l'écran avec la nouvelle résolution
             self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-            
-            # Recalculer les dimensions des éléments d'interface
-            self.LARGEUR_DROPDOWN = int(400 * self.RATIO_X)
-            self.HAUTEUR_DROPDOWN = int(60 * self.RATIO_Y)
-            self.ESPACE_SECTIONS = int(120 * self.RATIO_Y)
-            
-            # Recréer les dropdowns avec les nouvelles dimensions
+
+
+            # Recréer les dropdowns avec les nouvelles dimensions d'écran
             self.dropdowns = self._creer_dropdowns()
             print(f"Résolution changée à {largeur}x{hauteur}")
-        
+
             # Mettre à jour l'option sélectionnée dans le menu déroulant
             self.dropdowns["resolution"]["selected"] = self.options_resolution.index(resolution)
+
+    def get_resolution(self):
+        return self.LARGEUR, self.HAUTEUR
 
 
 if __name__ == "__main__":
