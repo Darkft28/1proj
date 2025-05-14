@@ -22,6 +22,14 @@ class EditeurPlateau4x4:
         self.TAILLE_BASE_BOUTON = 140
         self.MARGE_BASE = 50
         
+        # page chargement
+        self.page_courante = 0
+        
+        self.total_largeur = 0
+        self.total_hauteur = 0
+        self.debut_x = 0
+        self.debut_y = 0
+        
         # Couleurs
         self.BLANC = (255, 255, 255)
         self.NOIR = (40, 40, 40)
@@ -114,22 +122,15 @@ class EditeurPlateau4x4:
     def charger_liste_plateaux(self):
         self.plateaux_sauvegardes = []
         self.boutons_plateaux = []
-        y_pos = int(100 * self.RATIO_Y)
         
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
             
-        for fichier in os.listdir("plateaux"):
-            if fichier.endswith('.json'):
-                rect = pygame.Rect(
-                    int(50 * self.RATIO_X),
-                    y_pos,
-                    int(700 * self.RATIO_X),
-                    int(60 * self.RATIO_Y)
-                )
-                self.plateaux_sauvegardes.append(fichier)
-                self.boutons_plateaux.append(rect)
-                y_pos += int(80 * self.RATIO_Y)
+        # Charger tous les fichiers JSON
+        self.plateaux_sauvegardes = [f for f in os.listdir("plateaux") if f.endswith('.json')]
+        
+        # Calculer le nombre total de pages
+        self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
 
     def dessiner_ecran_selection(self):
         self.ecran.fill(self.NOIR)
@@ -137,40 +138,132 @@ class EditeurPlateau4x4:
         # Titre
         police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
         titre = police.render("Sélectionnez un plateau", True, self.BLANC)
-        self.ecran.blit(titre, (int(50 * self.RATIO_X), int(30 * self.RATIO_Y)))
+        titre_rect = titre.get_rect(centerx=self.LARGEUR // 2, y=int(30 * self.RATIO_Y))
+        self.ecran.blit(titre, titre_rect)
+        
+        # Augmentation de 100% de la taille
+        taille_miniature = int(300 * min(self.RATIO_X, self.RATIO_Y))
+        espace = int(50 * min(self.RATIO_X, self.RATIO_Y))
+        
+        # Calcul pour centrer la grille 4x2
+        self.total_largeur = (taille_miniature * 4) + (espace * 3)
+        self.total_hauteur = (taille_miniature * 2) + espace
+        
+        self.debut_x = (self.LARGEUR - self.total_largeur) // 2
+        self.debut_y = (self.HAUTEUR - self.total_hauteur) // 2
 
-        # Dessiner les plateaux sauvegardés
+        # Afficher les miniatures de la page courante
+        self.boutons_plateaux = []
+        debut_index = self.page_courante * 8
+
+        # Charger la liste des plateaux si elle est vide
         if not self.plateaux_sauvegardes:
-            texte = police.render("Aucun plateau sauvegardé", True, self.BLANC)
-            self.ecran.blit(texte, (int(50 * self.RATIO_X), int(100 * self.RATIO_Y)))
-        else:
-            police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
-            for idx, fichier in enumerate(self.plateaux_sauvegardes):
-                rect = self.boutons_plateaux[idx]
-                pygame.draw.rect(self.ecran, self.BLEU, rect)
-                pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
-                
-                texte = police.render(fichier, True, self.BLANC)
-                self.ecran.blit(texte, (rect.x + int(20 * self.RATIO_X), rect.y + int(20 * self.RATIO_Y)))
+            self.charger_liste_plateaux()
+        
+        for i in range(min(8, len(self.plateaux_sauvegardes) - debut_index)):
+            ligne = i // 4
+            colonne = i % 4
+            x = self.debut_x + colonne * (taille_miniature + espace)
+            y = self.debut_y + ligne * (taille_miniature + espace)
+            
+            rect = pygame.Rect(x, y, taille_miniature, taille_miniature)
+            self.boutons_plateaux.append(rect)
+            
+            # Dessiner le fond et la bordure
+            pygame.draw.rect(self.ecran, (60, 60, 60), rect)
+            pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
+            
+            # Afficher le plateau
+            index = debut_index + i
+            try:
+                with open(f"plateaux/{self.plateaux_sauvegardes[index]}", 'r') as f:
+                    plateau_data = json.load(f)
+                    taille_tuile = taille_miniature // 4
+                    
+                    for ligne_p in range(4):
+                        for col_p in range(4):
+                            chemin_image = plateau_data[ligne_p][col_p]
+                            tuile_rect = pygame.Rect(
+                                x + (col_p * taille_tuile),
+                                y + (ligne_p * taille_tuile),
+                                taille_tuile,
+                                taille_tuile
+                            )
+                            
+                            if chemin_image:
+                                image = pygame.transform.scale(
+                                    self.images[self.ROUGE if "rouge" in chemin_image else
+                                            self.BLEU if "bleue" in chemin_image else
+                                            self.JAUNE if "jaune" in chemin_image else
+                                            self.VERT],
+                                    (taille_tuile, taille_tuile)
+                                )
+                                self.ecran.blit(image, tuile_rect)
+                            pygame.draw.rect(self.ecran, self.BLANC, tuile_rect, 1)
+            except Exception as e:
+                print(f"Erreur lors du chargement de la miniature {index}: {e}")
 
-        # Bouton retour
+        # Boutons de navigation (si plusieurs pages)
+        if self.nombre_pages > 1:
+            # Définir les rectangles pour les boutons de navigation
+            prec_rect = pygame.Rect(
+                int(self.debut_x - 100 * self.RATIO_X),
+                int(self.debut_y + self.total_hauteur//2),
+                int(50 * self.RATIO_X),
+                int(50 * self.RATIO_Y)
+            )
+            suiv_rect = pygame.Rect(
+                int(self.debut_x + self.total_largeur + 50 * self.RATIO_X),
+                int(self.debut_y + self.total_hauteur//2),
+                int(50 * self.RATIO_X),
+                int(50 * self.RATIO_Y)
+            )
+
+            police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
+            
+            # Bouton précédent
+            if self.page_courante > 0:
+                pygame.draw.rect(self.ecran, self.BLEU, prec_rect)
+                texte = police.render("<", True, self.BLANC)
+                rect_texte = texte.get_rect(center=prec_rect.center)
+                self.ecran.blit(texte, rect_texte)
+            
+            # Bouton suivant
+            if self.page_courante < self.nombre_pages - 1:
+                pygame.draw.rect(self.ecran, self.BLEU, suiv_rect)
+                texte = police.render(">", True, self.BLANC)
+                rect_texte = texte.get_rect(center=suiv_rect.center)
+                self.ecran.blit(texte, rect_texte)
+
+        # Boutons Retour et Nouveau en haut
         retour_rect = pygame.Rect(
             int(50 * self.RATIO_X),
             int(50 * self.RATIO_Y),
             int(200 * self.RATIO_X),
             int(50 * self.RATIO_Y)
         )
+        nouveau_rect = pygame.Rect(
+            int(self.LARGEUR * 0.7),
+            int(50 * self.RATIO_Y),
+            int(200 * self.RATIO_X),
+            int(50 * self.RATIO_Y)
+        )
+        
         pygame.draw.rect(self.ecran, self.ROUGE, retour_rect)
+        pygame.draw.rect(self.ecran, self.VERT, nouveau_rect)
         pygame.draw.rect(self.ecran, self.BLANC, retour_rect, 2)
+        pygame.draw.rect(self.ecran, self.BLANC, nouveau_rect, 2)
         
         police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
         texte = police.render("Retour", True, self.BLANC)
-        self.ecran.blit(texte, (
-            retour_rect.x + int(60 * self.RATIO_X),
-            retour_rect.y + int(15 * self.RATIO_Y)
-        ))
+        rect_texte = texte.get_rect(center=retour_rect.center)
+        self.ecran.blit(texte, rect_texte)
         
-        return retour_rect
+        texte = police.render("Nouveau", True, self.BLANC)
+        rect_texte = texte.get_rect(center=nouveau_rect.center)
+        self.ecran.blit(texte, rect_texte)
+        
+        return retour_rect, nouveau_rect
 
     def dessiner(self):
         self.ecran.fill(self.NOIR)
@@ -253,8 +346,19 @@ class EditeurPlateau4x4:
         rect_texte = texte.get_rect(center=menu_rect.center)
         self.ecran.blit(texte, rect_texte)
 
-    # Les autres méthodes restent identiques car elles utilisent déjà les variables adaptatives
     def sauvegarder_plateau(self):
+        # Vérifier que toutes les cases sont remplies
+        for ligne in self.plateau:
+            for case in ligne:
+                if case == self.NOIR:
+                    print("Erreur: Toutes les cases doivent être remplies avant de sauvegarder!")
+                    # Effet visuel d'erreur
+                    bouton = self.boutons["sauvegarder"]
+                    pygame.draw.rect(self.ecran, self.ROUGE, bouton["rect"], 4)
+                    pygame.display.flip()
+                    pygame.time.delay(300)
+                    return
+        
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
             
@@ -272,18 +376,34 @@ class EditeurPlateau4x4:
             for ligne in self.plateau:
                 ligne_images = []
                 for couleur in ligne:
-                    if couleur == self.NOIR:
-                        ligne_images.append(None)  # Case vide
-                    else:
-                        ligne_images.append(couleur_vers_image.get(couleur, None))
+                    ligne_images.append(couleur_vers_image[couleur])  # On sait que toutes les cases ont une couleur
                 plateau_images.append(ligne_images)
             
-            # Sauvegarder dans un fichier JSON
-            num = len([f for f in os.listdir("plateaux") if f.endswith('.json')])
-            nom_fichier = f"plateaux/plateau_{num}.json"
+            # Déterminer le nom du fichier
+            if hasattr(self, 'fichier_charge'):
+                # Si un plateau a été chargé, on l'écrase
+                nom_fichier = f"plateaux/{self.fichier_charge}"
+            else:
+                # Sinon, on crée un nouveau fichier
+                num = len([f for f in os.listdir("plateaux") if f.endswith('.json')])
+                nom_fichier = f"plateaux/plateau_{num}.json"
+            
             with open(nom_fichier, 'w') as f:
                 json.dump(plateau_images, f)
+                
+            # Recharger la liste et aller à la dernière page
+            self.charger_liste_plateaux()
+            self.page_courante = (len(self.plateaux_sauvegardes) - 1) // 8
             print(f"Plateau sauvegardé sous {nom_fichier}!")
+            
+            # Effet visuel de confirmation
+            bouton = self.boutons["sauvegarder"]
+            pygame.draw.rect(self.ecran, self.BLANC, bouton["rect"], 4)
+            pygame.display.flip()
+            pygame.time.delay(300)
+            
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde: {e}")
             
             # Effet visuel de confirmation
             bouton = self.boutons["sauvegarder"]
@@ -312,12 +432,11 @@ class EditeurPlateau4x4:
                 for ligne in plateau_images:
                     ligne_couleurs = []
                     for chemin in ligne:
-                        if chemin is None:
-                            ligne_couleurs.append(self.NOIR)  # Case vide
-                        else:
-                            ligne_couleurs.append(image_vers_couleur.get(chemin, self.NOIR))
+                        ligne_couleurs.append(image_vers_couleur[chemin])
                     self.plateau.append(ligne_couleurs)
-                    
+            
+            # Sauvegarder le nom du fichier chargé
+            self.fichier_charge = nom_fichier
             print("Plateau chargé avec succès!")
         except Exception as e:
             print(f"Erreur lors du chargement: {e}")
@@ -365,20 +484,59 @@ class EditeurPlateau4x4:
                     
                     elif self.mode == "selection":
                         # Vérifier le clic sur le bouton retour
+                        if self.nombre_pages > 1:
+                            prec_rect = pygame.Rect(
+                                int((self.LARGEUR - self.total_largeur) // 2 - 100 * self.RATIO_X),
+                                int(self.debut_y + self.total_hauteur//2),
+                                int(50 * self.RATIO_X),
+                                int(50 * self.RATIO_Y)
+                            )
+                            suiv_rect = pygame.Rect(
+                                int((self.LARGEUR + self.total_largeur) // 2 + 50 * self.RATIO_X),
+                                int(self.debut_y + self.total_hauteur//2),
+                                int(50 * self.RATIO_X),
+                                int(50 * self.RATIO_Y)
+                            )
+                            
+                            if prec_rect.collidepoint(x, y) and self.page_courante > 0:
+                                self.page_courante -= 1
+                                pygame.display.flip()
+                                continue
+                                
+                            if suiv_rect.collidepoint(x, y) and self.page_courante < self.nombre_pages - 1:
+                                self.page_courante += 1
+                                pygame.display.flip()
+                                continue
+                            
                         retour_rect = pygame.Rect(
                             int(50 * self.RATIO_X),
                             int(50 * self.RATIO_Y),
                             int(200 * self.RATIO_X),
                             int(50 * self.RATIO_Y)
                         )
+                        nouveau_rect = pygame.Rect(
+                            int(self.LARGEUR * 0.7),
+                            int(50 * self.RATIO_Y),
+                            int(200 * self.RATIO_X),
+                            int(50 * self.RATIO_Y)
+                        )
                         if retour_rect.collidepoint(x, y):
                             self.mode = "editeur"
-                        
-                        # Vérifier les clics sur les plateaux sauvegardés
+                        elif nouveau_rect.collidepoint(x, y):
+                            # Réinitialiser le plateau et le fichier chargé
+                            self.plateau = [[self.NOIR for _ in range(self.TAILLE_PLATEAU)] 
+                                        for _ in range(self.TAILLE_PLATEAU)]
+                            if hasattr(self, 'fichier_charge'):
+                                delattr(self, 'fichier_charge')
+                            self.mode = "editeur"
+                            
                         for idx, rect in enumerate(self.boutons_plateaux):
                             if rect.collidepoint(x, y):
-                                self.charger_plateau(self.plateaux_sauvegardes[idx])
-                                self.mode = "editeur"
+                                # Calculer l'index réel en tenant compte de la page courante
+                                index_reel = self.page_courante * 8 + idx
+                                if index_reel < len(self.plateaux_sauvegardes):
+                                    self.charger_plateau(self.plateaux_sauvegardes[index_reel])
+                                    self.mode = "editeur"
                                 break
             
             if self.mode == "editeur":
