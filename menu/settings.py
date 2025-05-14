@@ -13,6 +13,10 @@ class Settings:
         self.RATIO_X = self.LARGEUR / 2560
         self.RATIO_Y = self.HAUTEUR / 1440
         
+        # Charger l'image d'arrière-plan
+        self.background_image = pygame.image.load("assets/fond-menu-defaut.png")  # Remplacez par le chemin de votre image
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
+        
         # Couleurs
         self.BLANC = (255, 255, 255)
         self.NOIR = (40, 40, 40)
@@ -20,18 +24,36 @@ class Settings:
         self.BLEU = (29, 185, 242)
         self.JAUNE = (235, 226, 56)
         self.VERT = (24, 181, 87)
+        self.GRIS = (150, 150, 150)
+        self.GRIS_FONCE = (80, 80, 80)
         
-        # Configuration des boutons
-        self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
-        self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
-        self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
+        # Configuration des éléments d'interface
+        self.LARGEUR_DROPDOWN = int(400 * self.RATIO_X)
+        self.HAUTEUR_DROPDOWN = int(60 * self.RATIO_Y)
+        self.ESPACE_SECTIONS = int(120 * self.RATIO_Y)
         
         # Initialisation de l'écran
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
         pygame.display.set_caption("Paramètres")
         
-        # Créer les boutons
-        self.boutons = self._creer_boutons()
+        # Options disponibles pour chaque menu déroulant
+        self.options_resolution = ["720p", "1080p", "1440p", "2160p"]
+        self.options_theme = ["Clair", "Sombre", "Bleu", "Rouge"]
+        self.options_langue = ["Français", "English", "Español", "Deutsch"]
+        
+        # Options sélectionnées
+        self.selected_resolution = 1  # Index par défaut (1080p)
+        self.selected_theme = 1       # Index par défaut (Sombre)
+        self.selected_langue = 0      # Index par défaut (Français)
+        
+        # État des menus déroulants (ouvert/fermé)
+        self.dropdown_resolution_ouvert = False
+        self.dropdown_theme_ouvert = False
+        self.dropdown_langue_ouvert = False
+        
+        
+        # Créer les dropdowns
+        self.dropdowns = self._creer_dropdowns()
         
         # Bouton retour
         self.bouton_retour = {
@@ -40,60 +62,132 @@ class Settings:
             "couleur": self.ROUGE,
             "texte": "Retour"
         }
-        
-    def _creer_boutons(self):
-        boutons = {}
-        
-        # Position centrale pour les boutons
-        x_centre = self.LARGEUR // 2 - self.LARGEUR_BOUTON // 2
-        y_debut = self.HAUTEUR // 2 - (3 * self.HAUTEUR_BOUTON + 2 * self.ESPACE_BOUTONS) // 2
-        
-        boutons_config = [
-            ("720", self.VERT, "720"),
-            ("1080", self.BLEU, "1080"),
-            ("1440", self.JAUNE, "1440")
-        ]
-        
-        for i, (nom, couleur, texte) in enumerate(boutons_config):
-            y = y_debut + i * (self.HAUTEUR_BOUTON + self.ESPACE_BOUTONS)
-            boutons[nom] = {
-                "rect": pygame.Rect(x_centre, y, self.LARGEUR_BOUTON, self.HAUTEUR_BOUTON),
-                "couleur": couleur,
-                "texte": texte
+    
+    def _creer_dropdowns(self):
+        """Crée les menus déroulants pour les paramètres"""
+        # Calculer les positions verticales pour chaque section
+        y_resolution = int(300 * self.RATIO_Y)
+        y_theme = y_resolution + self.ESPACE_SECTIONS
+        y_langue = y_theme + self.ESPACE_SECTIONS
+
+        # Position horizontale centrée pour les menus déroulants
+        x_dropdown = (self.LARGEUR - self.LARGEUR_DROPDOWN) // 2
+
+        # Créer un dictionnaire pour stocker les informations des menus déroulants
+        dropdowns = {
+            "resolution": {
+                "titre": "Résolution",
+                "dropdown_rect": pygame.Rect(x_dropdown, y_resolution, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
+                "options": self.options_resolution,
+                "selected": self.selected_resolution,
+                "ouvert": self.dropdown_resolution_ouvert,
+                "options_rects": []
+            },
+            "theme": {
+                "titre": "Thème",
+                "dropdown_rect": pygame.Rect(x_dropdown, y_theme, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
+                "options": self.options_theme,
+                "selected": self.selected_theme,
+                "ouvert": self.dropdown_theme_ouvert,
+                "options_rects": []
+            },
+            "langue": {
+                "titre": "Langue",
+                "dropdown_rect": pygame.Rect(x_dropdown, y_langue, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
+                "options": self.options_langue,
+                "selected": self.selected_langue,
+                "ouvert": self.dropdown_langue_ouvert,
+                "options_rects": []
             }
-        
-        return boutons
+        }
+
+        return dropdowns
     
     def dessiner(self):
-        # Fond noir
-        self.ecran.fill(self.NOIR)
+        # Afficher l'image d'arrière-plan
+        self.ecran.blit(self.background_image, (0, 0))
         
-        # Titre
+        # Titre principal
         police_titre = pygame.font.Font(None, int(72 * min(self.RATIO_X, self.RATIO_Y)))
-        titre = police_titre.render("PARAMÈTRES", True, self.BLANC)
-        rect_titre = titre.get_rect(center=(self.LARGEUR//2, int(200 * self.RATIO_Y)))
+        titre = police_titre.render("PARAMÈTRES :", True, self.BLANC)
+        rect_titre = titre.get_rect(center=(self.LARGEUR // 2, int(150 * self.RATIO_Y)))
         self.ecran.blit(titre, rect_titre)
         
-        # Dessiner les boutons de paramètres
-        police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
-        for info_bouton in self.boutons.values():
-            # Dessiner le fond du bouton
-            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"])
-            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
+        # Police pour les boutons
+        police_bouton = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+        
+        # Dessiner les sections et menus déroulants fermés
+        menus_ouverts = []
+        for nom, info in self.dropdowns.items():
+            # Texte à afficher dans le bouton (sous-titre + option sélectionnée)
+            texte_bouton = f"{info['titre']} : {info['options'][info['selected']]}"
+            texte_rendu = police_bouton.render(texte_bouton, True, self.BLANC)  # Texte blanc
             
-            # Dessiner le texte
-            texte = police.render(info_bouton["texte"], True, self.BLANC)
-            rect_texte = texte.get_rect(center=info_bouton["rect"].center)
-            self.ecran.blit(texte, rect_texte)
+            # Dessiner le bouton avec des bords arrondis
+            rect_bouton = info["dropdown_rect"]
+            pygame.draw.rect(self.ecran, self.GRIS_FONCE, rect_bouton, border_radius=15)  # Fond arrondi
+            pygame.draw.rect(self.ecran, self.BLANC, rect_bouton, 2, border_radius=15)    # Bordure arrondie
+            
+            # Centrer le texte dans le bouton
+            rect_texte = texte_rendu.get_rect(center=rect_bouton.center)
+            self.ecran.blit(texte_rendu, rect_texte)
+            
+            # Dessiner la flèche du menu déroulant
+            arrow_points = [
+                (rect_bouton.right - int(30 * self.RATIO_X), rect_bouton.centery - int(10 * self.RATIO_Y)),
+                (rect_bouton.right - int(15 * self.RATIO_X), rect_bouton.centery + int(10 * self.RATIO_Y)),
+                (rect_bouton.right - int(45 * self.RATIO_X), rect_bouton.centery + int(10 * self.RATIO_Y))
+            ]
+            pygame.draw.polygon(self.ecran, self.BLANC, arrow_points)
+            
+            # Ajouter les menus ouverts à une liste pour les dessiner en dernier
+            if info["ouvert"]:
+                menus_ouverts.append(info)
         
         # Dessiner le bouton retour
-        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"])
-        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2)
+        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
         
-        texte_retour = police.render(self.bouton_retour["texte"], True, self.BLANC)
+        texte_retour = police_bouton.render(self.bouton_retour["texte"], True, self.BLANC)
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
         self.ecran.blit(texte_retour, rect_texte_retour)
-    
+        
+        # Dessiner les menus déroulants ouverts en dernier
+        for info in menus_ouverts:
+            self._dessiner_menu_ouvert(info)
+
+    def _dessiner_menu_ouvert(self, info):
+        """Dessiner les options d'un menu déroulant ouvert."""
+        menu_height = len(info["options_rects"]) * self.HAUTEUR_DROPDOWN
+        menu_width = info["dropdown_rect"].width
+        
+        # Dessiner un fond opaque pour les options
+        fond_rect = pygame.Rect(
+            info["dropdown_rect"].x,
+            info["dropdown_rect"].bottom,
+            menu_width,
+            menu_height
+        )
+        pygame.draw.rect(self.ecran, self.GRIS_FONCE, fond_rect, border_radius=15)  # Fond gris foncé avec bords arrondis
+
+        # Police pour les options
+        police_options = pygame.font.Font(None, int(42 * min(self.RATIO_X, self.RATIO_Y)))
+        
+        # Dessiner chaque option
+        for i, option_rect in enumerate(info["options_rects"]):
+            # Fond de l'option
+            couleur_fond = self.VERT if i == info["selected"] else self.GRIS
+            pygame.draw.rect(self.ecran, couleur_fond, option_rect, border_radius=10)
+            pygame.draw.rect(self.ecran, self.BLANC, option_rect, 2, border_radius=10)  # Bordure blanche
+            
+            # Texte de l'option
+            texte_option = police_options.render(info["options"][i], True, self.BLANC)  # Texte blanc
+            rect_texte = texte_option.get_rect(
+                midleft=(option_rect.x + int(20 * self.RATIO_X), option_rect.centery)
+            )
+            self.ecran.blit(texte_option, rect_texte)
+
+
     def executer(self):
         en_cours = True
         while en_cours:
@@ -108,23 +202,91 @@ class Settings:
                     if self.bouton_retour["rect"].collidepoint(x, y):
                         en_cours = False
                     
-                    # Vérifier les clics sur les boutons de paramètres
-                    for nom, info in self.boutons.items():
-                        if info["rect"].collidepoint(x, y):
-                            if nom == "720":
-                                print("résolution 720 sélectionnée")
-                                # TODO: 
-                            elif nom == "1080":
-                                print("résolution 1080 sélectionnée")
-                                # TODO: 
-                            elif nom == "1440":
-                                print("résolution 1440 sélectionnée")
-                                # TODO: 
+                    # Vérifier les clics sur les menus déroulants
+                    dropdown_clique = False
+                    for nom, info in self.dropdowns.items():
+                        # Clic sur le menu déroulant principal
+                        if info["dropdown_rect"].collidepoint(x, y):
+                            dropdown_clique = True
+                            # Fermer tous les autres menus déroulants
+                            for autre_nom in self.dropdowns:
+                                if autre_nom != nom:
+                                    self.dropdowns[autre_nom]["ouvert"] = False
+                            
+                            # Inverser l'état du menu actuel
+                            info["ouvert"] = not info["ouvert"]
+                            
+                            # Recréer les rectangles pour les options si le menu est ouvert
+                            if info["ouvert"]:
+                                info["options_rects"] = []
+                                for j in range(len(info["options"])):
+                                    option_rect = pygame.Rect(
+                                        info["dropdown_rect"].x, 
+                                        info["dropdown_rect"].bottom + j * self.HAUTEUR_DROPDOWN,
+                                        self.LARGEUR_DROPDOWN, 
+                                        self.HAUTEUR_DROPDOWN
+                                    )
+                                    info["options_rects"].append(option_rect)
+                        
+                        # Si le menu est ouvert, vérifier les clics sur les options
+                        elif info["ouvert"]:
+                            for i, option_rect in enumerate(info["options_rects"]):
+                                if i < len(info["options"]) and option_rect.collidepoint(x, y):
+                                    dropdown_clique = True
+                                    info["selected"] = i
+                                    info["ouvert"] = False
+                                    
+                                    # Appliquer les changements de paramètres
+                                    if nom == "resolution":
+                                        print(f"Résolution {info['options'][i]} sélectionnée")
+                                        self._changer_resolution(info['options'][i])
+                                    elif nom == "theme":
+                                        print(f"Thème {info['options'][i]} sélectionné")
+                                        # TODO: Appliquer le changement de thème
+                                    elif nom == "langue":
+                                        print(f"Langue {info['options'][i]} sélectionnée")
+                                        # TODO: Appliquer le changement de langue
+                    
+                    # Si on a cliqué en dehors des menus déroulants, tous les fermer
+                    if not dropdown_clique:
+                        for nom in self.dropdowns:
+                            self.dropdowns[nom]["ouvert"] = False
             
             self.dessiner()
             pygame.display.flip()
         
         # Retourne au menu principal sans quitter le jeu
+
+    def _changer_resolution(self, resolution):
+        """Change la résolution de l'écran."""
+        resolutions_map = {
+            "720p": (1280, 720),
+            "1080p": (1920, 1080),
+            "1440p": (2560, 1440),
+            "2160p": (3840, 2160)
+        }
+        if resolution in resolutions_map:
+            largeur, hauteur = resolutions_map[resolution]
+            self.LARGEUR = largeur
+            self.HAUTEUR = hauteur
+            self.RATIO_X = self.LARGEUR / 2560
+            self.RATIO_Y = self.HAUTEUR / 1440
+            
+            # Mettre à jour l'écran avec la nouvelle résolution
+            self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
+            
+            # Recalculer les dimensions des éléments d'interface
+            self.LARGEUR_DROPDOWN = int(400 * self.RATIO_X)
+            self.HAUTEUR_DROPDOWN = int(60 * self.RATIO_Y)
+            self.ESPACE_SECTIONS = int(120 * self.RATIO_Y)
+            
+            # Recréer les dropdowns avec les nouvelles dimensions
+            self.dropdowns = self._creer_dropdowns()
+            print(f"Résolution changée à {largeur}x{hauteur}")
+        
+            # Mettre à jour l'option sélectionnée dans le menu déroulant
+            self.dropdowns["resolution"]["selected"] = self.options_resolution.index(resolution)
+
 
 if __name__ == "__main__":
     settings = Settings()
