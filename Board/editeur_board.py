@@ -8,10 +8,16 @@ class EditeurPlateau4x4:
         # Initialiser Pygame
         pygame.init()
         
+        self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
+        
         # Obtenir la résolution de l'écran
         info = pygame.display.Info()
         self.LARGEUR = info.current_w
         self.HAUTEUR = info.current_h
+        
+        # Fond d'écran
+        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-editeur.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440
         self.RATIO_X = self.LARGEUR / 2560
@@ -78,6 +84,11 @@ class EditeurPlateau4x4:
         
         # Boutons
         self.boutons = self._creer_boutons()
+        self.bouton_retour = {
+        "rect": pygame.Rect(int(50 * self.RATIO_X), int(50 * self.RATIO_Y), 120, 40),
+        "couleur": self.ROUGE,
+        "texte": "Retour"
+        }
 
     def _creer_boutons(self):
         boutons = {}
@@ -100,12 +111,12 @@ class EditeurPlateau4x4:
         # Boutons d'action
         largeur_bouton = int(225 * self.RATIO_X)
         hauteur_bouton = int(60 * self.RATIO_Y)
-        x_action = int(self.LARGEUR * 0.815)  # ~2088/2560
+        x_action = int(self.LARGEUR * 0.815)  
         
         boutons_actions = [
-            ("sauvegarder", self.VERT, "Sauvegarder", "save", 550),
-            ("charger", self.BLEU, "Charger", "load", 690),
-            ("effacer", self.ROUGE, "Effacer tout", "clear", 830)
+            ("sauvegarder", self.NOIR, "Sauvegarder", "save", 550),
+            ("charger", self.NOIR, "Charger", "load", 690),
+            ("effacer", self.NOIR, "Effacer tout", "clear", 830)
         ]
         
         for nom, couleur, texte, action, y in boutons_actions:
@@ -133,12 +144,16 @@ class EditeurPlateau4x4:
         self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
 
     def dessiner_ecran_selection(self):
-        self.ecran.fill(self.NOIR)
+        self.ecran.blit(self.background_image, (0, 0))
+        
+        
+        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 23)
         
         # Titre
         police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
-        titre = police.render("Sélectionnez un plateau", True, self.BLANC)
-        titre_rect = titre.get_rect(centerx=self.LARGEUR // 2, y=int(30 * self.RATIO_Y))
+        titre = police_titre.render("Selectionnez un plateau", True, self.BLANC)
+        titre_rect = titre.get_rect(centerx=self.LARGEUR // 2, y=int(80 * self.RATIO_Y))
         self.ecran.blit(titre, titre_rect)
         
         # Augmentation de 100% de la taille
@@ -235,38 +250,38 @@ class EditeurPlateau4x4:
                 rect_texte = texte.get_rect(center=suiv_rect.center)
                 self.ecran.blit(texte, rect_texte)
 
-        # Boutons Retour et Nouveau en haut
+        # Bouton Retour (style identique menu/settings)
         retour_rect = pygame.Rect(
             int(50 * self.RATIO_X),
             int(50 * self.RATIO_Y),
-            int(200 * self.RATIO_X),
-            int(50 * self.RATIO_Y)
+            120, 40
         )
+        pygame.draw.rect(self.ecran, self.ROUGE, retour_rect, border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, retour_rect, 2, border_radius=15)
+        police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
+        texte_retour = police_retour.render("Retour", True, self.BLANC)
+        rect_texte = texte_retour.get_rect(center=retour_rect.center)
+        self.ecran.blit(texte_retour, rect_texte)
+
+        # Bouton Nouveau arrondi
         nouveau_rect = pygame.Rect(
-            int(self.LARGEUR * 0.7),
-            int(50 * self.RATIO_Y),
+            titre_rect.right + 30,  # 30 pixels d'espace après le titre
+            titre_rect.y + (titre_rect.height // 2) - int(25 * self.RATIO_Y),  # centré verticalement sur le titre
             int(200 * self.RATIO_X),
             int(50 * self.RATIO_Y)
         )
-        
-        pygame.draw.rect(self.ecran, self.ROUGE, retour_rect)
-        pygame.draw.rect(self.ecran, self.VERT, nouveau_rect)
-        pygame.draw.rect(self.ecran, self.BLANC, retour_rect, 2)
-        pygame.draw.rect(self.ecran, self.BLANC, nouveau_rect, 2)
-        
-        police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
-        texte = police.render("Retour", True, self.BLANC)
-        rect_texte = texte.get_rect(center=retour_rect.center)
-        self.ecran.blit(texte, rect_texte)
-        
-        texte = police.render("Nouveau", True, self.BLANC)
-        rect_texte = texte.get_rect(center=nouveau_rect.center)
-        self.ecran.blit(texte, rect_texte)
-        
+        pygame.draw.rect(self.ecran, self.NOIR, nouveau_rect, border_radius=20)
+        pygame.draw.rect(self.ecran, self.BLANC, nouveau_rect, 2, border_radius=20)
+        texte_nouveau = police_bouton.render("Nouveau", True, self.BLANC)
+        rect_texte_nouveau = texte_nouveau.get_rect(center=nouveau_rect.center)
+        self.ecran.blit(texte_nouveau, rect_texte_nouveau)
+
         return retour_rect, nouveau_rect
 
     def dessiner(self):
-        self.ecran.fill(self.NOIR)
+        # Afficher l'image d'arrière-plan
+        self.ecran.blit(self.background_image, (0, 0))
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 23)
         
         # Dessiner le plateau
         for ligne in range(self.TAILLE_PLATEAU):
@@ -294,24 +309,23 @@ class EditeurPlateau4x4:
         for key, info_bouton in self.boutons.items():
             rect = info_bouton["rect"]
             couleur = info_bouton["couleur"]
-            
-            # Draw button background
-            pygame.draw.rect(self.ecran, self.NOIR, rect)
-            
-            # For color selection buttons, draw the image if available
+
+            # Boutons arrondis noirs avec contour blanc
+            pygame.draw.rect(self.ecran, self.NOIR, rect, border_radius=20)
+            pygame.draw.rect(self.ecran, self.BLANC, rect, 2, border_radius=20)
+
+            # Pour les boutons de sélection de couleur, affiche l'image si dispo
             if info_bouton["action"] == "select_color" and couleur in self.images:
                 image = pygame.transform.scale(self.images[couleur], 
                                             (rect.width, rect.height))
                 self.ecran.blit(image, rect)
             else:
-                pygame.draw.rect(self.ecran, couleur, rect)
-            
-            pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
+                pygame.draw.rect(self.ecran, couleur, rect, border_radius=20)
             
             # Highlight selected color
             if (info_bouton["action"] == "select_color" and 
                 info_bouton["couleur"] == self.couleur_selectionnee):
-                pygame.draw.rect(self.ecran, self.BLANC, rect, 4)
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 4, border_radius=20)
                 
                 triangle_size = int(30 * min(self.RATIO_X, self.RATIO_Y))
                 triangle_x = rect.x - triangle_size - 10
@@ -324,27 +338,19 @@ class EditeurPlateau4x4:
                 ]
                 pygame.draw.polygon(self.ecran, self.BLANC, points)
             
-            # Draw button text if present
+            # Texte des boutons d'action avec police personnalisée
             if "texte" in info_bouton:
-                police = pygame.font.Font(None, int(30 * min(self.RATIO_X, self.RATIO_Y)))
-                texte = police.render(info_bouton["texte"], True, self.BLANC)
+                texte = police_bouton.render(info_bouton["texte"], True, self.BLANC)
                 rect_texte = texte.get_rect(center=rect.center)
                 self.ecran.blit(texte, rect_texte)
-        
-        menu_rect = pygame.Rect(
-            int(50 * self.RATIO_X),
-            int(50 * self.RATIO_Y),
-            int(200 * self.RATIO_X),
-            int(50 * self.RATIO_Y)
-        )
-        
-        pygame.draw.rect(self.ecran, self.ROUGE, menu_rect)
-        pygame.draw.rect(self.ecran, self.BLANC, menu_rect, 2)
-        
-        police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
-        texte = police.render("Retour ", True, self.BLANC)
-        rect_texte = texte.get_rect(center=menu_rect.center)
-        self.ecran.blit(texte, rect_texte)
+
+        # Bouton retour (identique à settings.py)
+        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
+        police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
+        texte_retour = police_retour.render(self.bouton_retour["texte"], True, self.BLANC)
+        rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
+        self.ecran.blit(texte_retour, rect_texte_retour)
 
     def sauvegarder_plateau(self):
         # Vérifier que toutes les cases sont remplies
@@ -352,9 +358,9 @@ class EditeurPlateau4x4:
             for case in ligne:
                 if case == self.NOIR:
                     print("Erreur: Toutes les cases doivent être remplies avant de sauvegarder!")
-                    # Effet visuel d'erreur
+                    # Effet visuel d'erreur : rectangle rouge arrondi
                     bouton = self.boutons["sauvegarder"]
-                    pygame.draw.rect(self.ecran, self.ROUGE, bouton["rect"], 4)
+                    pygame.draw.rect(self.ecran, self.ROUGE, bouton["rect"], 4, border_radius=20)
                     pygame.display.flip()
                     pygame.time.delay(300)
                     return

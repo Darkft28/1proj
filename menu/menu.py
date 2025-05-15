@@ -9,10 +9,16 @@ class Menu:
     def __init__(self):
         pygame.init()
         
+        self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
+        
         # Obtenir la résolution de l'écran
         info = pygame.display.Info()
         self.LARGEUR = info.current_w
         self.HAUTEUR = info.current_h
+        
+        # Fond d'écran
+        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440
         self.RATIO_X = self.LARGEUR / 2560
@@ -40,17 +46,25 @@ class Menu:
         
     def _creer_boutons(self):
         boutons = {}
-        
-        # Position centrale pour les boutons
-        x_centre = self.LARGEUR // 2 - self.LARGEUR_BOUTON // 2
-        y_debut = self.HAUTEUR // 2 - (3 * self.HAUTEUR_BOUTON + 2 * self.ESPACE_BOUTONS) // 2
-        
+
+        # Taille fixe pour les boutons
+        self.LARGEUR_BOUTON = 400
+        self.HAUTEUR_BOUTON = 80
+        self.ESPACE_BOUTONS = 40
+
         boutons_config = [
-            ("jouer", self.VERT, "Jouer"),
-            ("editeur", self.BLEU, "Créer votre quadrant"),
-            ("parametres", self.JAUNE, "Paramètres")
+            ("jouer", self.NOIR, "Jouer"),
+            ("editeur", self.NOIR, "Creer votre quadrant"),
+            ("parametres", self.NOIR, "Parametres")
         ]
-        
+
+        nb_boutons = len(boutons_config)
+        total_height = nb_boutons * self.HAUTEUR_BOUTON + (nb_boutons - 1) * self.ESPACE_BOUTONS
+
+        # Calcul du centre horizontal et vertical à CHAQUE appel
+        x_centre = self.LARGEUR // 2 - self.LARGEUR_BOUTON // 2
+        y_debut = self.HAUTEUR // 2 - total_height // 2
+
         for i, (nom, couleur, texte) in enumerate(boutons_config):
             y = y_debut + i * (self.HAUTEUR_BOUTON + self.ESPACE_BOUTONS)
             boutons[nom] = {
@@ -58,30 +72,31 @@ class Menu:
                 "couleur": couleur,
                 "texte": texte
             }
-        
+
         return boutons
-    
+
     def dessiner(self):
-        # Fond noir
-        self.ecran.fill(self.NOIR)
+        # Afficher l'image d'arrière-plan
+        self.ecran.blit(self.background_image, (0, 0))
+        
+        # Police personnalisée pour tous les textes
+        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 48)
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         
         # Titre
-        police_titre = pygame.font.Font(None, int(72 * min(self.RATIO_X, self.RATIO_Y)))
-        titre = police_titre.render("1Proj", True, self.BLANC)
-        rect_titre = titre.get_rect(center=(self.LARGEUR//2, int(200 * self.RATIO_Y)))
+        titre = police_titre.render("KATARENGA & Co", True, self.BLANC)
+        rect_titre = titre.get_rect(center=(self.LARGEUR//2, 200))
         self.ecran.blit(titre, rect_titre)
         
-        # Dessiner les boutons
-        police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+        # Dessiner les boutons noirs et arrondis
         for info_bouton in self.boutons.values():
-            # Dessiner le fond du bouton
-            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"])
-            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
-            
-            # Dessiner le texte
-            texte = police.render(info_bouton["texte"], True, self.BLANC)
+            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"], border_radius=30)
+            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 3, border_radius=30)
+            texte = police_bouton.render(info_bouton["texte"], True, self.BLANC)
             rect_texte = texte.get_rect(center=info_bouton["rect"].center)
             self.ecran.blit(texte, rect_texte)
+            
+            
     
     def executer(self):
         en_cours = True
@@ -114,11 +129,9 @@ class Menu:
                                 from menu.settings import Settings
                                 settings = Settings(self.LARGEUR, self.HAUTEUR)
                                 settings.executer()
-                                nouvelle_largeur, nouvelle_hauteur = settings.get_resolution()
-                                self.LARGEUR = nouvelle_largeur
-                                self.HAUTEUR = nouvelle_hauteur
                                 self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-                                pygame.display.set_caption("Paramètres")
+                                pygame.display.set_caption("Menu Principal")
+                                self.boutons = self._creer_boutons()  # Pour bien recentrer les boutons si besoin
             
             self.dessiner()
             pygame.display.flip()
