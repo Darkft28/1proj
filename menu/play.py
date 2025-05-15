@@ -4,10 +4,16 @@ class Play:
     def __init__(self):
         pygame.init()
         
+        self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
+        
         # Obtenir la résolution de l'écran
         info = pygame.display.Info()
         self.LARGEUR = info.current_w
         self.HAUTEUR = info.current_h
+        
+        # Fond d'écran
+        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-jouer.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440
         self.RATIO_X = self.LARGEUR / 2560
@@ -35,25 +41,32 @@ class Play:
         
         # Bouton retour
         self.bouton_retour = {
-            "rect": pygame.Rect(int(50 * self.RATIO_X), int(50 * self.RATIO_Y), 
-                               int(200 * self.RATIO_X), int(60 * self.RATIO_Y)),
+            "rect": pygame.Rect(int(50 * self.RATIO_X), int(50 * self.RATIO_Y), 120, 40),  # même taille que settings.py
             "couleur": self.ROUGE,
             "texte": "Retour"
         }
         
     def _creer_boutons(self):
         boutons = {}
-        
-        # Position centrale pour les boutons
-        x_centre = self.LARGEUR // 2 - self.LARGEUR_BOUTON // 2
-        y_debut = self.HAUTEUR // 2 - (3 * self.HAUTEUR_BOUTON + 2 * self.ESPACE_BOUTONS) // 2
-        
+
+        # Taille fixe pour les boutons
+        self.LARGEUR_BOUTON = 400
+        self.HAUTEUR_BOUTON = 80
+        self.ESPACE_BOUTONS = 40
+
         boutons_config = [
-            ("Katarenga", self.VERT, "Katarenga"),
-            ("Isolation", self.BLEU, "Isolation"),
-            ("Congress", self.JAUNE, "Congress")
+            ("Katarenga", self.NOIR, "Katarenga"),
+            ("Isolation", self.NOIR, "Isolation"),
+            ("Congress", self.NOIR, "Congress")
         ]
-        
+
+        nb_boutons = len(boutons_config)
+        total_height = nb_boutons * self.HAUTEUR_BOUTON + (nb_boutons - 1) * self.ESPACE_BOUTONS
+
+        # Calcul du centre horizontal et vertical à CHAQUE appel
+        x_centre = self.LARGEUR // 2 - self.LARGEUR_BOUTON // 2
+        y_debut = self.HAUTEUR // 2 - total_height // 2
+
         for i, (nom, couleur, texte) in enumerate(boutons_config):
             y = y_debut + i * (self.HAUTEUR_BOUTON + self.ESPACE_BOUTONS)
             boutons[nom] = {
@@ -61,36 +74,35 @@ class Play:
                 "couleur": couleur,
                 "texte": texte
             }
-        
+
         return boutons
     
     def dessiner(self):
-        # Fond noir
-        self.ecran.fill(self.NOIR)
+        # Afficher l'image d'arrière-plan
+        self.ecran.blit(self.background_image, (0, 0))
+        
+        # Police personnalisée pour tous les textes
+        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 48)
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         
         # Titre
-        police_titre = pygame.font.Font(None, int(72 * min(self.RATIO_X, self.RATIO_Y)))
         titre = police_titre.render("Choix du jeu", True, self.BLANC)
-        rect_titre = titre.get_rect(center=(self.LARGEUR//2, int(200 * self.RATIO_Y)))
+        rect_titre = titre.get_rect(center=(self.LARGEUR//2, 200))
         self.ecran.blit(titre, rect_titre)
         
-        # Dessiner les boutons de paramètres
-        police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+        # Dessiner les boutons noirs, arrondis, contour blanc, texte centré
         for info_bouton in self.boutons.values():
-            # Dessiner le fond du bouton
-            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"])
-            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 2)
-            
-            # Dessiner le texte
-            texte = police.render(info_bouton["texte"], True, self.BLANC)
+            pygame.draw.rect(self.ecran, info_bouton["couleur"], info_bouton["rect"], border_radius=30)
+            pygame.draw.rect(self.ecran, self.BLANC, info_bouton["rect"], 3, border_radius=30)
+            texte = police_bouton.render(info_bouton["texte"], True, self.BLANC)
             rect_texte = texte.get_rect(center=info_bouton["rect"].center)
             self.ecran.blit(texte, rect_texte)
         
-        # Dessiner le bouton retour
-        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"])
-        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2)
-        
-        texte_retour = police.render(self.bouton_retour["texte"], True, self.BLANC)
+        # Dessiner le bouton retour (identique à settings.py)
+        pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
+        police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
+        texte_retour = police_retour.render(self.bouton_retour["texte"], True, self.BLANC)
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
         self.ecran.blit(texte_retour, rect_texte_retour)
     
@@ -112,13 +124,13 @@ class Play:
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
                             if nom == "Katarenga":
-                                print("résolution 720 sélectionnée")
+                                print("jeu Katarenga")
                                 # TODO: 
                             elif nom == "Isolation":
-                                print("résolution 1080 sélectionnée")
+                                print("jeu Isolation")
                                 # TODO: 
                             elif nom == "Congress":
-                                print("résolution 1440 sélectionnée")
+                                print("jeu Congress")
                                 # TODO: 
             
             self.dessiner()
@@ -129,3 +141,4 @@ class Play:
 if __name__ == "__main__":
     start = Play()
     start.executer()
+    
