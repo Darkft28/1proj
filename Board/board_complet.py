@@ -1,17 +1,9 @@
 import pygame
-import sys
-import os
 import json
+import os
+import sys
 
-class JeuDePlateau:
-    # Couleurs
-    BLANC = (255, 255, 255)
-    NOIR = (40, 40, 40)
-    ROUGE = (173, 7, 60)    
-    BLEU = (29, 185, 242)     
-    JAUNE = (235, 226, 56)    
-    VERT = (24, 181, 87)     
-
+class SelecteurPlateau:
     def __init__(self):
         # Initialiser Pygame
         pygame.init()
@@ -25,439 +17,493 @@ class JeuDePlateau:
         self.RATIO_X = self.LARGEUR / 2560
         self.RATIO_Y = self.HAUTEUR / 1440
         
-        # Dimensions de l'écran adaptées
-        self.LARGEUR_JEU = int(self.LARGEUR * 0.7)  # 70% de l'écran pour le jeu
-        self.HAUTEUR_JEU = int(self.HAUTEUR * 0.5)
-        self.LARGEUR_PANNEAU = int(self.LARGEUR * 0.3)  # 30% pour le panneau
-        self.LARGEUR_ECRAN = self.LARGEUR
-        self.HAUTEUR_ECRAN = self.HAUTEUR
+        # Variables de pagination
+        self.page_courante = 0
+        self.nombre_pages = 0
         
-        # Dimensions de la grille
-        self.TAILLE_GRILLE = 2
-        self.TAILLE_TUILE = self.HAUTEUR // self.TAILLE_GRILLE
+        # Variables de mise en page
+        self.total_largeur = 0
+        self.total_hauteur = 0
+        self.debut_x = 0
+        self.debut_y = 0
         
-        # Dimensions des petits plateaux
-        self.TAILLE_PETIT_PLATEAU = 4
-        self.TAILLE_PETITE_TUILE = self.TAILLE_TUILE // self.TAILLE_PETIT_PLATEAU
+        # Couleurs
+        self.BLANC = (255, 255, 255)
+        self.NOIR = (40, 40, 40)
+        self.ROUGE = (173, 7, 60)
+        self.BLEU = (29, 185, 242)
+        self.JAUNE = (235, 226, 56)
+        self.VERT = (24, 181, 87)
         
-        # Plateau combiné
-        self.TAILLE_PLATEAU_COMBINE = self.TAILLE_PETIT_PLATEAU * self.TAILLE_GRILLE  # 8x8
+        # Configuration de l'écran
+        self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
+        pygame.display.set_caption("Sélection du Plateau")
         
-        # Constantes du panneau d'édition
-        self.POSITION_X_PANNEAU = self.LARGEUR_JEU
-        self.LARGEUR_PANNEAU = self.LARGEUR_ECRAN - self.LARGEUR_JEU
-        self.TAILLE_APERCU = int(150 * min(self.RATIO_X, self.RATIO_Y))
-        self.MARGE_PANNEAU = int(20 * min(self.RATIO_X, self.RATIO_Y))
-        
-        # Initialiser l'écran
-        self.ecran = pygame.display.set_mode((self.LARGEUR_ECRAN, self.HAUTEUR_ECRAN), pygame.FULLSCREEN)
-        pygame.display.set_caption("Placement et Rotation de Plateaux")
-        
+        # Chargement des images
         self.images = {}
         try:
-            self.images["assets/image_rouge.png"] = pygame.image.load("assets/image_rouge.png").convert_alpha()
-            self.images["assets/image_bleue.png"] = pygame.image.load("assets/image_bleue.png").convert_alpha()
-            self.images["assets/image_jaune.png"] = pygame.image.load("assets/image_jaune.png").convert_alpha()
-            self.images["assets/image_verte.png"] = pygame.image.load("assets/image_verte.png").convert_alpha()
+            image_paths = {
+                self.ROUGE: "assets/image_rouge.png",
+                self.BLEU: "assets/image_bleue.png",
+                self.JAUNE: "assets/image_jaune.png",
+                self.VERT: "assets/image_verte.png"
+            }
+            for couleur, path in image_paths.items():
+                self.images[couleur] = pygame.image.load(path).convert_alpha()
         except pygame.error as e:
             print(f"Erreur lors du chargement des images: {e}")
-            pygame.quit()
-            sys.exit()
+            sys.exit(1)
         
-        # Créer les petits plateaux
-        self.petits_plateaux = self.charger_plateaux_sauvegardes()
+        # Liste des plateaux
+        self.plateaux_sauvegardes = []
+        self.boutons_plateaux = []
         
-        # Créer les petits plateaux
-        self.petits_plateaux = self.charger_plateaux_sauvegardes()
-        if not self.petits_plateaux:  # Si aucun plateau n'est trouvé
-            print("Aucun plateau trouvé dans le dossier 'plateaux'")
-            pygame.quit()
-            sys.exit()
+        # Charger la liste initiale
+        self.charger_liste_plateaux()
         
-        # Variables pour le glisser-déposer
-        self.plateau_selectionne = None
-        self.position_selection = None
-        self.rotation_selection = 0
-        self.plateaux_places = [None, None, None, None]
-        
-        # Mode
-        self.mode_edition = True
-        self.plateau_combine = None
-        self.cacher_aperçus = False
-        
-    def dessiner_grand_plateau(self):
-        for ligne in range(self.TAILLE_GRILLE):
-            for colonne in range(self.TAILLE_GRILLE):
-                rect = pygame.Rect(
-                    int(colonne * self.TAILLE_TUILE), 
-                    int(ligne * self.TAILLE_TUILE),
-                    int(self.TAILLE_TUILE), 
-                    int(self.TAILLE_TUILE)
-                )
-                pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
-    
-    def dessiner_panneau_edition(self):
-        if self.cacher_aperçus is not True:
-            # Dessiner l'arrière-plan du panneau
-            rect_panneau = pygame.Rect(self.POSITION_X_PANNEAU, 0, self.LARGEUR_PANNEAU, self.HAUTEUR_ECRAN)
-            pygame.draw.rect(self.ecran, (60, 60, 60), rect_panneau)
-            
-            # Dessiner le titre
-            police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
-            titre = police.render("Éditeur de Plateau", True, self.BLANC)
-            self.ecran.blit(titre, (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, self.MARGE_PANNEAU))
-            
-            if self.mode_edition:
-                # Dessiner les aperçus des plateaux disponibles
-                for idx, plateau in enumerate(self.petits_plateaux):
-                    if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != plateau for i in range(4)):
-                        position_y = idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU) + int(80 * self.RATIO_Y)
-                        rect_apercu = pygame.Rect(
-                            self.POSITION_X_PANNEAU + self.MARGE_PANNEAU,
-                            position_y,
-                            self.TAILLE_APERCU,
-                            self.TAILLE_APERCU
-                        )
-                        pygame.draw.rect(self.ecran, (80, 80, 80), rect_apercu)
-                        pygame.draw.rect(self.ecran, self.BLANC, rect_apercu, 2)
-                        
-                        # Dessiner une version miniature du plateau
-                        mini_tuile = self.TAILLE_APERCU // self.TAILLE_PETIT_PLATEAU
-                        for ligne in range(self.TAILLE_PETIT_PLATEAU):
-                            for colonne in range(self.TAILLE_PETIT_PLATEAU):
-                                chemin_image = plateau[ligne][colonne]
-                                mini_rect = pygame.Rect(
-                                    int(self.POSITION_X_PANNEAU + self.MARGE_PANNEAU + colonne * mini_tuile),
-                                    int(position_y + ligne * mini_tuile),
-                                    int(mini_tuile),
-                                    int(mini_tuile)
-                                )
-                                if chemin_image and chemin_image in self.images:
-                                    image = pygame.transform.scale(self.images[chemin_image], 
-                                                                (int(mini_tuile), int(mini_tuile)))
-                                    self.ecran.blit(image, mini_rect)
-                                else:
-                                    pygame.draw.rect(self.ecran, self.NOIR, mini_rect)
-                                pygame.draw.rect(self.ecran, self.BLANC, mini_rect, 1)
+        # Ajout des variables pour la sélection multiple
+        self.plateaux_selectionnes = []
+        self.NOMBRE_PLATEAUX_REQUIS = 4
+        self.COULEUR_SELECTION = (24, 181, 87)  # Vert
 
-    def dessiner_plateau_combine(self):
-        taille_cellule = self.LARGEUR_JEU // self.TAILLE_PLATEAU_COMBINE
-        
-        for ligne in range(self.TAILLE_PLATEAU_COMBINE):
-            for colonne in range(self.TAILLE_PLATEAU_COMBINE):
-                chemin_image = self.plateau_combine[ligne][colonne]
-                
-                if chemin_image:
-                    rect = pygame.Rect(
-                        int(colonne * taille_cellule),
-                        int(ligne * taille_cellule),
-                        int(taille_cellule),
-                        int(taille_cellule)
-                    )
-                    
-                    if chemin_image in self.images:
-                        image = pygame.transform.scale(self.images[chemin_image], 
-                                                    (int(taille_cellule), int(taille_cellule)))
-                        self.ecran.blit(image, rect)
-                    else:
-                        pygame.draw.rect(self.ecran, self.NOIR, rect)
-                    
-                    pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
+        # Ajouter les variables pour le drag and drop
+        self.dragging = False
+        self.dragged_plateau = None
+        self.drag_start_pos = None
+        self.dropped_plateaux = [[None, None], [None, None]]  # Grille 2x2 pour stocker les plateaux placés
 
-    def dessiner(self):
-        self.ecran.fill(self.NOIR)
+    def charger_liste_plateaux(self):
+        self.plateaux_sauvegardes = []
+        self.boutons_plateaux = []
         
-        if self.mode_edition:
-            self.dessiner_grand_plateau()
-            
-            for idx, info_plateau in enumerate(self.plateaux_places):
-                if info_plateau is not None:
-                    plateau, x, y, rotation = info_plateau
-                    self.dessiner_petit_plateau(plateau, x, y, rotation)
-            
-            if self.plateau_selectionne is not None and self.position_selection is not None:
-                souris_x, souris_y = self.position_selection
-                self.dessiner_petit_plateau(
-                    self.petits_plateaux[self.plateau_selectionne],
-                    int(souris_x - self.TAILLE_PETITE_TUILE * 2),
-                    int(souris_y - self.TAILLE_PETITE_TUILE * 2),
-                    self.rotation_selection
-                )
-        else:
-            if self.plateau_combine:
-                self.dessiner_plateau_combine()
-        
-        self.dessiner_panneau_edition()
-        pygame.display.flip()
-
-    def gerer_souris_appui(self, pos):
-        souris_x, souris_y = pos
-        
-        # Vérifier si le clic est dans le panneau d'édition
-        if self.POSITION_X_PANNEAU <= souris_x <= self.LARGEUR_ECRAN:
-            # Vérifier le clic sur le bouton
-            rect_bouton = self.dessiner_panneau_edition()
-            if rect_bouton and rect_bouton.collidepoint(souris_x, souris_y):
-                if self.mode_edition:
-                    # Vérifier si tous les plateaux sont placés
-                    if all(plateau is not None for plateau in self.plateaux_places):
-                        self.creer_plateau_combine()
-                        self.mode_edition = False
-                        self.cacher_aperçus = True
-                        
-                else:
-                    # Bouton de réinitialisation cliqué
-                    self.mode_edition = True
-                    self.plateau_combine = None
-                    self.plateaux_places = [None, None, None, None]
-                    self.plateau_selectionne = None
-                    self.position_selection = None
-                    self.rotation_selection = 0
-                return
-            
-            # Gérer la sélection de plateau uniquement en mode édition
-            if self.mode_edition:
-                idx = (souris_y - 80) // (self.TAILLE_APERCU + self.MARGE_PANNEAU)
-                if 0 <= idx < len(self.petits_plateaux):
-                    if all(self.plateaux_places[i] is None or self.plateaux_places[i][0] != self.petits_plateaux[idx] for i in range(4)):
-                        self.plateau_selectionne = idx
-                        self.position_selection = (self.POSITION_X_PANNEAU + self.MARGE_PANNEAU, 
-                                                80 + idx * (self.TAILLE_APERCU + self.MARGE_PANNEAU))
-        
-        # Vérifier si un plateau placé est cliqué (seulement en mode édition)
-        elif self.mode_edition:
-            for idx, info_plateau in enumerate(self.plateaux_places):
-                if info_plateau is not None:
-                    plateau, x, y, rotation = info_plateau
-                    if x <= souris_x < x + self.TAILLE_TUILE and y <= souris_y < y + self.TAILLE_TUILE:
-                        self.plateau_selectionne = self.petits_plateaux.index(plateau)
-                        self.position_selection = (souris_x, souris_y)
-                        self.plateaux_places[idx] = None
-                        break
-    
-    def gerer_souris_relache(self, pos):
-        # Gérer uniquement en mode édition
-        if not self.mode_edition:
-            return
-            
-        if self.plateau_selectionne is not None:
-            souris_x, souris_y = pos
-            
-            if souris_x < self.LARGEUR_JEU:  # Placer uniquement dans la zone de jeu
-                grille_x = souris_x // self.TAILLE_TUILE
-                grille_y = souris_y // self.TAILLE_TUILE
-                
-                if 0 <= grille_x < self.TAILLE_GRILLE and 0 <= grille_y < self.TAILLE_GRILLE:
-                    indice_cible = grille_y * self.TAILLE_GRILLE + grille_x
-                    
-                    info_plateau_existant = self.plateaux_places[indice_cible]
-                    self.plateaux_places[indice_cible] = (
-                        self.petits_plateaux[self.plateau_selectionne],
-                        grille_x * self.TAILLE_TUILE,
-                        grille_y * self.TAILLE_TUILE,
-                        self.rotation_selection
-                    )
-                    
-                    if info_plateau_existant is not None:
-                        ancien_plateau, _, _, ancienne_rotation = info_plateau_existant
-                        self.plateau_selectionne = self.petits_plateaux.index(ancien_plateau)
-                        self.rotation_selection = ancienne_rotation
-                        self.position_selection = (souris_x, souris_y)
-                    else:
-                        self.plateau_selectionne = None
-                        self.position_selection = None
-    
-    def gerer_touche_appui(self, touche):
-        # Gérer uniquement en mode édition
-        if not self.mode_edition:
-            return
-            
-        if self.plateau_selectionne is not None:
-            if touche == pygame.K_r:  # Faire tourner le plateau
-                self.rotation_selection = (self.rotation_selection + 90) % 360
-    
-    def gerer_souris_mouvement(self, pos):
-        # Gérer uniquement en mode édition
-        if not self.mode_edition:
-            return
-            
-        if self.plateau_selectionne is not None and self.position_selection is not None:
-            self.position_selection = pos
-            
-    def creer_plateau_combine(self):
-        # Initialiser le plateau 8x8
-        self.plateau_combine = [[None for _ in range(self.TAILLE_PLATEAU_COMBINE)] for _ in range(self.TAILLE_PLATEAU_COMBINE)]
-        
-        # Traiter chaque plateau placé
-        for idx, info_plateau in enumerate(self.plateaux_places):
-            if info_plateau is not None:
-                plateau, _, _, rotation = info_plateau
-                
-                # Calculer la position dans la grande grille
-                grille_x = idx % self.TAILLE_GRILLE
-                grille_y = idx // self.TAILLE_GRILLE
-                
-                # Remplir le plateau combiné avec les couleurs de ce petit plateau
-                for petite_ligne in range(self.TAILLE_PETIT_PLATEAU):
-                    for petite_colonne in range(self.TAILLE_PETIT_PLATEAU):
-                        # Obtenir la couleur en fonction de la rotation
-                        if rotation == 0:
-                            couleur = plateau[petite_ligne][petite_colonne]
-                        elif rotation == 90:
-                            couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - petite_colonne][petite_ligne]
-                        elif rotation == 180:
-                            couleur = plateau[self.TAILLE_PETIT_PLATEAU - 1 - petite_ligne][self.TAILLE_PETIT_PLATEAU - 1 - petite_colonne]
-                        elif rotation == 270:
-                            couleur = plateau[petite_colonne][self.TAILLE_PETIT_PLATEAU - 1 - petite_ligne]
-                            
-                        # Calculer la position dans le plateau combiné
-                        ligne_combinee = (grille_y * self.TAILLE_PETIT_PLATEAU) + petite_ligne
-                        colonne_combinee = (grille_x * self.TAILLE_PETIT_PLATEAU) + petite_colonne
-                        
-                        # Définir la couleur
-                        self.plateau_combine[ligne_combinee][colonne_combinee] = couleur
-    
-    def dessiner(self):
-        self.ecran.fill(self.NOIR)
-        
-        if self.mode_edition:
-            # Dessiner la zone de jeu
-            self.dessiner_grand_plateau()
-            
-            # Dessiner les petits plateaux placés
-            for idx, info_plateau in enumerate(self.plateaux_places):
-                if info_plateau is not None:
-                    plateau, x, y, rotation = info_plateau
-                    self.dessiner_petit_plateau(plateau, x, y, rotation)
-            
-            # Dessiner le plateau actuellement déplacé
-            if self.plateau_selectionne is not None and self.position_selection is not None:
-                souris_x, souris_y = self.position_selection
-                self.dessiner_petit_plateau(self.petits_plateaux[self.plateau_selectionne], 
-                                  souris_x - self.TAILLE_PETITE_TUILE * 2,
-                                  souris_y - self.TAILLE_PETITE_TUILE * 2,
-                                  self.rotation_selection)
-        else:
-            # Dessiner le plateau combiné
-            if self.plateau_combine:
-                self.dessiner_plateau_combine()
-        
-        # Dessiner le panneau d'édition (toujours)
-        self.dessiner_panneau_edition()
-        
-        pygame.display.flip()
-        
-    def dessiner_plateau_combine(self):
-        # Dessiner le plateau combiné 8x8
-        taille_cellule = self.LARGEUR_JEU // self.TAILLE_PLATEAU_COMBINE
-        
-        for ligne in range(self.TAILLE_PLATEAU_COMBINE):
-            for colonne in range(self.TAILLE_PLATEAU_COMBINE):
-                couleur = self.plateau_combine[ligne][colonne]
-                
-                if couleur:
-                    rect = pygame.Rect(
-                        colonne * taille_cellule, 
-                        ligne * taille_cellule, 
-                        taille_cellule, 
-                        taille_cellule
-                    )
-                    pygame.draw.rect(self.ecran, couleur, rect)
-                    pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
-                    
-    def charger_plateaux_sauvegardes(self):
-        """Charge les plateaux depuis les fichiers JSON dans le dossier plateaux"""
-        plateaux = []
-        
-        # Vérifier si le dossier existe
         if not os.path.exists("plateaux"):
-            print("Le dossier 'plateaux' n'existe pas")
-            return []
+            print("Aucun plateau trouvé!")
+            return
+            
+        # Charger tous les fichiers JSON
+        self.plateaux_sauvegardes = [f for f in os.listdir("plateaux") if f.endswith('.json')]
         
-        # Charger chaque fichier JSON
-        for fichier in os.listdir("plateaux"):
-            if fichier.endswith('.json'):
-                try:
-                    with open(os.path.join("plateaux", fichier), 'r') as f:
-                        plateau = json.load(f)
-                        plateaux.append(plateau)  # Garder les chemins d'images directement
-                except Exception as e:
-                    print(f"Erreur lors du chargement de {fichier}: {e}")
-        
-        if not plateaux:
-            # Créer un plateau par défaut avec des chemins d'images null
-            plateau_defaut = [[None for _ in range(self.TAILLE_PETIT_PLATEAU)] 
-                            for _ in range(self.TAILLE_PETIT_PLATEAU)]
-            plateaux.append(plateau_defaut)
-        
-        return plateaux
+        # Calculer le nombre total de pages
+        self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
 
-    def dessiner_petit_plateau(self, plateau, x, y, rotation):
-        for ligne in range(self.TAILLE_PETIT_PLATEAU):
-            for colonne in range(self.TAILLE_PETIT_PLATEAU):
-                # Ajustement pour la rotation
-                if rotation == 0:
-                    chemin_image = plateau[ligne][colonne]
-                elif rotation == 90:
-                    chemin_image = plateau[self.TAILLE_PETIT_PLATEAU - 1 - colonne][ligne]
-                elif rotation == 180:
-                    chemin_image = plateau[self.TAILLE_PETIT_PLATEAU - 1 - ligne][self.TAILLE_PETIT_PLATEAU - 1 - colonne]
-                elif rotation == 270:
-                    chemin_image = plateau[colonne][self.TAILLE_PETIT_PLATEAU - 1 - ligne]
+    def dessiner_ecran_selection(self):
+        self.ecran.fill(self.NOIR)
+        
+        # Titre
+        police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+        titre = police.render("Sélectionnez un plateau", True, self.BLANC)
+        titre_rect = titre.get_rect(centerx=self.LARGEUR // 2, y=int(30 * self.RATIO_Y))
+        self.ecran.blit(titre, titre_rect)
+        
+        # Dimensions des miniatures
+        taille_miniature = int(300 * min(self.RATIO_X, self.RATIO_Y))
+        espace = int(50 * min(self.RATIO_X, self.RATIO_Y))
+        
+        # Calcul pour centrer la grille 4x2
+        self.total_largeur = (taille_miniature * 4) + (espace * 3)
+        self.total_hauteur = (taille_miniature * 2) + espace
+        
+        self.debut_x = (self.LARGEUR - self.total_largeur) // 2
+        self.debut_y = (self.HAUTEUR - self.total_hauteur) // 2
+        
+        # Afficher les miniatures
+        debut_index = self.page_courante * 8
+        self.boutons_plateaux = []
+        
+        for i in range(min(8, len(self.plateaux_sauvegardes) - debut_index)):
+            ligne = i // 4
+            colonne = i % 4
+            x = self.debut_x + colonne * (taille_miniature + espace)
+            y = self.debut_y + ligne * (taille_miniature + espace)
+            
+            rect = pygame.Rect(x, y, taille_miniature, taille_miniature)
+            self.boutons_plateaux.append(rect)
+            
+            # Fond gris pour tous les plateaux
+            pygame.draw.rect(self.ecran, (60, 60, 60), rect)
+            
+            # Afficher la prévisualisation
+            try:
+                with open(f"plateaux/{self.plateaux_sauvegardes[debut_index + i]}", 'r') as f:
+                    plateau_data = json.load(f)
+                    taille_tuile = taille_miniature // 4
+                    
+                    for ligne_p in range(4):
+                        for col_p in range(4):
+                            chemin_image = plateau_data[ligne_p][col_p]
+                            tuile_rect = pygame.Rect(
+                                x + (col_p * taille_tuile),
+                                y + (ligne_p * taille_tuile),
+                                taille_tuile,
+                                taille_tuile
+                            )
+                            
+                            if chemin_image:
+                                couleur = (self.ROUGE if "rouge" in chemin_image else
+                                         self.BLEU if "bleue" in chemin_image else
+                                         self.JAUNE if "jaune" in chemin_image else
+                                         self.VERT)
+                                image = pygame.transform.scale(
+                                    self.images[couleur],
+                                    (taille_tuile, taille_tuile)
+                                )
+                                self.ecran.blit(image, tuile_rect)
+                            pygame.draw.rect(self.ecran, self.BLANC, tuile_rect, 1)
+            except Exception as e:
+                print(f"Erreur lors du chargement de la miniature {debut_index + i}: {e}")
 
-                rect = pygame.Rect(
-                    int(x + colonne * self.TAILLE_PETITE_TUILE),
-                    int(y + ligne * self.TAILLE_PETITE_TUILE),
-                    int(self.TAILLE_PETITE_TUILE),
-                    int(self.TAILLE_PETITE_TUILE)
+            # Dessiner la bordure de sélection APRÈS les tuiles
+            if self.plateaux_sauvegardes[debut_index + i] in self.plateaux_selectionnes:
+                pygame.draw.rect(self.ecran, self.COULEUR_SELECTION, rect, 8)  # Bordure verte épaisse
+            else:
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 2)  # Bordure blanche fine
+
+        # Boutons de navigation
+        if self.nombre_pages > 1:
+            if self.page_courante > 0:
+                prec_rect = pygame.Rect(
+                    int(self.debut_x - 100 * self.RATIO_X),
+                    int(self.debut_y + self.total_hauteur//2),
+                    int(50 * self.RATIO_X),
+                    int(50 * self.RATIO_Y)
                 )
-                
+                pygame.draw.rect(self.ecran, self.BLEU, prec_rect)
+                police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
+                texte = police.render("<", True, self.BLANC)
+                rect_texte = texte.get_rect(center=prec_rect.center)
+                self.ecran.blit(texte, rect_texte)
+            
+            if self.page_courante < self.nombre_pages - 1:
+                suiv_rect = pygame.Rect(
+                    int(self.debut_x + self.total_largeur + 50 * self.RATIO_X),
+                    int(self.debut_y + self.total_hauteur//2),
+                    int(50 * self.RATIO_X),
+                    int(50 * self.RATIO_Y)
+                )
+                pygame.draw.rect(self.ecran, self.BLEU, suiv_rect)
+                texte = police.render(">", True, self.BLANC)
+                rect_texte = texte.get_rect(center=suiv_rect.center)
+                self.ecran.blit(texte, rect_texte)
+
+        # Bouton retour
+        retour_rect = pygame.Rect(
+            int(50 * self.RATIO_X),
+            int(50 * self.RATIO_Y),
+            int(200 * self.RATIO_X),
+            int(50 * self.RATIO_Y)
+        )
+        
+        pygame.draw.rect(self.ecran, self.ROUGE, retour_rect)
+        pygame.draw.rect(self.ecran, self.BLANC, retour_rect, 2)
+        
+        police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
+        texte = police.render("Retour", True, self.BLANC)
+        rect_texte = texte.get_rect(center=retour_rect.center)
+        self.ecran.blit(texte, rect_texte)
+        
+        # Bouton suivant (uniquement si 4 plateaux sont sélectionnés)
+        if len(self.plateaux_selectionnes) == self.NOMBRE_PLATEAUX_REQUIS:
+            suivant_rect = pygame.Rect(
+                int(self.LARGEUR - 250 * self.RATIO_X),
+                int(50 * self.RATIO_Y),
+                int(200 * self.RATIO_X),
+                int(50 * self.RATIO_Y)
+            )
+            pygame.draw.rect(self.ecran, self.VERT, suivant_rect)
+            pygame.draw.rect(self.ecran, self.BLANC, suivant_rect, 2)
+            
+            police = pygame.font.Font(None, int(36 * min(self.RATIO_X, self.RATIO_Y)))
+            texte = police.render("Suivant", True, self.BLANC)
+            rect_texte = texte.get_rect(center=suivant_rect.center)
+            self.ecran.blit(texte, rect_texte)
+            
+            return retour_rect, suivant_rect
+        
+        return retour_rect, None
+
+    def afficher_ecran_final(self, plateaux_selectionnes):
+        self.ecran.fill(self.NOIR)
+        
+        # Dimensions du plateau central (2x2) - Augmenté de 75%
+        taille_plateau_central = int(1050 * min(self.RATIO_X, self.RATIO_Y))  # 600 * 1.75
+        taille_quadrant = taille_plateau_central // 2
+        
+        # Position du plateau central (au milieu)
+        debut_x_central = (self.LARGEUR - taille_plateau_central) // 2
+        debut_y_central = (self.HAUTEUR - taille_plateau_central) // 2
+        
+        # Dessiner la grille centrale 2x2
+        for ligne in range(2):
+            for col in range(2):
+                rect = pygame.Rect(
+                    debut_x_central + col * taille_quadrant,
+                    debut_y_central + ligne * taille_quadrant,
+                    taille_quadrant,
+                    taille_quadrant
+                )
                 # Dessiner le fond
-                pygame.draw.rect(self.ecran, self.NOIR, rect)
-                
-                # Dessiner l'image si disponible
-                if chemin_image and chemin_image in self.images:
-                    image = pygame.transform.scale(self.images[chemin_image], 
-                                                (int(self.TAILLE_PETITE_TUILE),
-                                                int(self.TAILLE_PETITE_TUILE)))
-                    self.ecran.blit(image, rect)
-                
+                pygame.draw.rect(self.ecran, (60, 60, 60), rect)
                 # Dessiner la bordure
-                pygame.draw.rect(self.ecran, self.BLANC, rect, 1)
-    
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 2)
+                
+                # Afficher le plateau s'il a été déposé à cet emplacement
+                if self.dropped_plateaux[ligne][col]:
+                    try:
+                        self.dessiner_plateau_miniature(
+                            self.dropped_plateaux[ligne][col],
+                            rect.x, rect.y,
+                            taille_quadrant
+                        )
+                    except Exception as e:
+                        print(f"Erreur lors de l'affichage du plateau déposé: {e}")
+        
+        # Dimensions des plateaux latéraux
+        taille_plateau_lateral = int(250 * min(self.RATIO_X, self.RATIO_Y))
+        
+        # Afficher les plateaux sélectionnés non déposés
+        plateaux_non_deposes = [p for p in plateaux_selectionnes if not any(p in row for row in self.dropped_plateaux)]
+        for i, plateau in enumerate(plateaux_non_deposes):
+            if i < 2:  # Gauche
+                x = int(50 * self.RATIO_X)
+                y = int((self.HAUTEUR // 4) + (i * taille_plateau_lateral * 1.2))
+            else:  # Droite
+                x = self.LARGEUR - int(50 * self.RATIO_X) - taille_plateau_lateral
+                y = int((self.HAUTEUR // 4) + ((i-2) * taille_plateau_lateral * 1.2))
+                
+            rect = pygame.Rect(x, y, taille_plateau_lateral, taille_plateau_lateral)
+            if plateau != self.dragged_plateau:
+                try:
+                    self.dessiner_plateau_miniature(plateau, x, y, taille_plateau_lateral)
+                except Exception as e:
+                    print(f"Erreur lors de l'affichage du plateau {i}: {e}")
+
+        # Si un plateau est en cours de déplacement, le dessiner à la position de la souris
+        if self.dragging and self.dragged_plateau:
+            x, y = pygame.mouse.get_pos()
+            try:
+                self.dessiner_plateau_miniature(
+                    self.dragged_plateau,
+                    x - taille_plateau_lateral//2,
+                    y - taille_plateau_lateral//2,
+                    taille_plateau_lateral
+                )
+            except Exception as e:
+                print(f"Erreur lors de l'affichage du plateau déplacé: {e}")
+
+        # Ajouter le bouton de confirmation si tous les plateaux sont placés
+        tous_places = all(all(cell for cell in row) for row in self.dropped_plateaux)
+        if tous_places:
+            bouton_confirmer = pygame.Rect(
+                (self.LARGEUR - 300 * self.RATIO_X) // 2,
+                debut_y_central + taille_plateau_central + 20 * self.RATIO_Y,
+                300 * self.RATIO_X,
+                60 * self.RATIO_Y
+            )
+            pygame.draw.rect(self.ecran, self.VERT, bouton_confirmer)
+            pygame.draw.rect(self.ecran, self.BLANC, bouton_confirmer, 2)
+            
+            police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
+            texte = police.render("Confirmer", True, self.BLANC)
+            rect_texte = texte.get_rect(center=bouton_confirmer.center)
+            self.ecran.blit(texte, rect_texte)
+            
+            return bouton_confirmer
+        return None
+
+    def dessiner_plateau_miniature(self, nom_fichier, x, y, taille):
+        """Méthode utilitaire pour dessiner un plateau miniature"""
+        with open(f"plateaux/{nom_fichier}", 'r') as f:
+            plateau_data = json.load(f)
+            taille_tuile = taille // 4
+            
+            # Fond du plateau
+            rect = pygame.Rect(x, y, taille, taille)
+            pygame.draw.rect(self.ecran, (60, 60, 60), rect)
+            
+            # Dessiner les tuiles
+            for ligne in range(4):
+                for col in range(4):
+                    chemin_image = plateau_data[ligne][col]
+                    tuile_rect = pygame.Rect(
+                        x + (col * taille_tuile),
+                        y + (ligne * taille_tuile),
+                        taille_tuile,
+                        taille_tuile
+                    )
+                    
+                    if chemin_image:
+                        couleur = (self.ROUGE if "rouge" in chemin_image else
+                                 self.BLEU if "bleue" in chemin_image else
+                                 self.JAUNE if "jaune" in chemin_image else
+                                 self.VERT)
+                        image = pygame.transform.scale(
+                            self.images[couleur],
+                            (taille_tuile, taille_tuile)
+                        )
+                        self.ecran.blit(image, tuile_rect)
+                    pygame.draw.rect(self.ecran, self.BLANC, tuile_rect, 1)
+
+    def get_plateau_rect(self, plateau):
+        """Retourne le rectangle d'un plateau sélectionné dans la vue latérale."""
+        taille_plateau_lateral = int(250 * min(self.RATIO_X, self.RATIO_Y))
+        plateaux_non_deposes = [p for p in self.plateaux_selectionnes if not any(p in row for row in self.dropped_plateaux)]
+        
+        try:
+            idx = plateaux_non_deposes.index(plateau)
+            if idx < 2:  # Gauche
+                x = int(50 * self.RATIO_X)
+                y = int((self.HAUTEUR // 4) + (idx * taille_plateau_lateral * 1.2))
+            else:  # Droite
+                x = self.LARGEUR - int(50 * self.RATIO_X) - taille_plateau_lateral
+                y = int((self.HAUTEUR // 4) + ((idx-2) * taille_plateau_lateral * 1.2))
+            
+            return pygame.Rect(x, y, taille_plateau_lateral, taille_plateau_lateral)
+        except ValueError:
+            return None
+
+    def get_grid_cell_rect(self, i, j):
+        """Retourne le rectangle d'une cellule de la grille centrale 2x2."""
+        taille_plateau_central = int(1050 * min(self.RATIO_X, self.RATIO_Y))  # Mise à jour de la taille
+        taille_quadrant = taille_plateau_central // 2
+        
+        debut_x_central = (self.LARGEUR - taille_plateau_central) // 2
+        debut_y_central = (self.HAUTEUR - taille_plateau_central) // 2
+        
+        return pygame.Rect(
+            debut_x_central + j * taille_quadrant,
+            debut_y_central + i * taille_quadrant,
+            taille_quadrant,
+            taille_quadrant
+        )
+
     def executer(self):
         en_cours = True
-        horloge = pygame.time.Clock()
+        self.mode = "selection"
         
         while en_cours:
-            try:
-                evenements = pygame.event.get()
-                for evenement in evenements:
-                    if evenement.type == pygame.QUIT:
-                        en_cours = False
-                    elif evenement.type == pygame.KEYDOWN:
-                        if evenement.key == pygame.K_ESCAPE:  # Quitter avec la touche Échap
-                            en_cours = False
-                        else:
-                            self.gerer_touche_appui(evenement.key)
-                    elif evenement.type == pygame.MOUSEBUTTONDOWN:
-                        self.gerer_souris_appui(evenement.pos)
-                    elif evenement.type == pygame.MOUSEBUTTONUP:
-                        self.gerer_souris_relache(evenement.pos)
-                    elif evenement.type == pygame.MOUSEMOTION:
-                        self.gerer_souris_mouvement(evenement.pos)
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return None
+                    
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    x, y = event.pos
+                    
+                    if self.mode == "selection":
+                        # Navigation entre les pages
+                        if self.nombre_pages > 1:
+                            prec_rect = pygame.Rect(
+                                int(self.debut_x - 100 * self.RATIO_X),
+                                int(self.debut_y + self.total_hauteur//2),
+                                int(50 * self.RATIO_X),
+                                int(50 * self.RATIO_Y)
+                            )
+                            suiv_rect = pygame.Rect(
+                                int(self.debut_x + self.total_largeur + 50 * self.RATIO_X),
+                                int(self.debut_y + self.total_hauteur//2),
+                                int(50 * self.RATIO_X),
+                                int(50 * self.RATIO_Y)
+                            )
+                            
+                            if prec_rect.collidepoint(x, y) and self.page_courante > 0:
+                                self.page_courante -= 1
+                                continue
+                                
+                            if suiv_rect.collidepoint(x, y) and self.page_courante < self.nombre_pages - 1:
+                                self.page_courante += 1
+                                continue
+                        
+                        retour_rect, suivant_rect = self.dessiner_ecran_selection()
+                        
+                        if suivant_rect and suivant_rect.collidepoint(x, y):
+                            self.mode = "placement"
+                            continue
+                            
+                        if retour_rect.collidepoint(x, y):
+                            return None
+                            
+                        # Sélection des plateaux
+                        for idx, rect in enumerate(self.boutons_plateaux):
+                            if rect.collidepoint(x, y):
+                                index_reel = self.page_courante * 8 + idx
+                                if index_reel < len(self.plateaux_sauvegardes):
+                                    plateau = self.plateaux_sauvegardes[index_reel]
+                                    if plateau in self.plateaux_selectionnes:
+                                        self.plateaux_selectionnes.remove(plateau)
+                                    elif len(self.plateaux_selectionnes) < self.NOMBRE_PLATEAUX_REQUIS:
+                                        self.plateaux_selectionnes.append(plateau)
+                    
+                    elif self.mode == "placement":
+                        # Gestion du drag and drop
+                        for plateau in self.plateaux_selectionnes:
+                            rect = self.get_plateau_rect(plateau)
+                            # Vérifier d'abord les plateaux déjà déposés
+                            est_depose = False
+                            for i in range(2):
+                                for j in range(2):
+                                    if self.dropped_plateaux[i][j] == plateau:
+                                        grid_rect = self.get_grid_cell_rect(i, j)
+                                        if grid_rect.collidepoint(x, y):
+                                            self.dragging = True
+                                            self.dragged_plateau = plateau
+                                            self.dropped_plateaux[i][j] = None
+                                            est_depose = True
+                                            break
+                                if est_depose:
+                                    break
+                            
+                            # Si le plateau n'est pas déposé, vérifier les plateaux latéraux
+                            if not est_depose and rect and rect.collidepoint(x, y):
+                                self.dragging = True
+                                self.dragged_plateau = plateau
+                                break
+                
+                elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
+                    if self.mode == "placement" and self.dragging:
+                        x, y = event.pos
+                        deposé = False
+                        for i in range(2):
+                            for j in range(2):
+                                rect = self.get_grid_cell_rect(i, j)
+                                if rect.collidepoint(x, y):
+                                    # Si la case est occupée, échanger les plateaux
+                                    if self.dropped_plateaux[i][j]:
+                                        plateau_existant = self.dropped_plateaux[i][j]
+                                        self.dropped_plateaux[i][j] = self.dragged_plateau
+                                        self.dragged_plateau = None
+                                        self.dragging = False
+                                        deposé = True
+                                    else:
+                                        self.dropped_plateaux[i][j] = self.dragged_plateau
+                                        self.dragged_plateau = None
+                                        self.dragging = False
+                                        deposé = True
+                                    break
+                            if deposé:
+                                break
+                        
+                        # Si le plateau n'a pas été déposé, il retourne à sa position d'origine
+                        if not deposé:
+                            self.dragging = False
+                            self.dragged_plateau = None
             
-            except Exception as e:
-                print(f"Exception non gérée: {e}")
-                pygame.event.clear()
+            # Affichage selon le mode
+            if self.mode == "selection":
+                self.dessiner_ecran_selection()
+            elif self.mode == "placement":
+                bouton_confirmer = self.afficher_ecran_final(self.plateaux_selectionnes)
+                
+                # Si le bouton confirmer existe et est cliqué
+                if (bouton_confirmer and event.type == pygame.MOUSEBUTTONDOWN and 
+                    event.button == 1 and bouton_confirmer.collidepoint(x, y)):
+                    return self.dropped_plateaux
             
-            self.dessiner()
-            horloge.tick(60)  # Limiter à 60 FPS
-        
-        pygame.quit()
-        sys.exit()
+            pygame.display.flip()
 
-# Point d'entrée principal
 if __name__ == "__main__":
-    jeu = JeuDePlateau()
-    jeu.executer()
+    selecteur = SelecteurPlateau()
+    plateaux_choisis = selecteur.executer()
+    if plateaux_choisis:
+        print(f"Plateaux sélectionnés : {plateaux_choisis}")
+    else:
+        print("Aucun plateau sélectionné")
+    pygame.quit()
