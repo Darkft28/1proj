@@ -7,6 +7,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
+from menu.menu_mode import MenuMode 
 
 class Play:
     def __init__(self):
@@ -120,15 +121,15 @@ class Play:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     en_cours = False
-                
+
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
-                    
+
                     # Vérifier le clic sur le bouton retour
                     if self.bouton_retour["rect"].collidepoint(x, y):
                         en_cours = False
-                    
-                    # Vérifier les clics sur les boutons de paramètres
+
+                    # Vérifier les clics sur les boutons de jeux
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
                             if nom == "Katarenga":
@@ -158,5 +159,8 @@ class Play:
             self.dessiner()
             pygame.display.flip()
         
-        pygame.quit()
-        sys.exit()
+        # Retourne au menu principal sans quitter le jeu
+
+if __name__ == "__main__":
+    start = Play()
+    start.executer()

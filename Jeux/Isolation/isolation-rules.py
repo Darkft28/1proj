@@ -22,7 +22,7 @@ class Plateau_pion:
         pygame.display.set_caption("Isolation - Jeu de Blocage")
         
         # Taille des cases
-        self.TAILLE_CASE = int(100 * self.RATIO_X)
+        self.TAILLE_CASE = int(120 * self.RATIO_X)
         self.OFFSET_X = (self.LARGEUR - 8 * self.TAILLE_CASE) // 2
         self.OFFSET_Y = (self.HAUTEUR - 8 * self.TAILLE_CASE) // 2
         
@@ -242,41 +242,49 @@ class Plateau_pion:
     def run(self):
         # Redimensionner les pions si ils existent
         if self.pion_blanc and self.pion_noir:
-            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (self.TAILLE_CASE, self.TAILLE_CASE))
-            self.pion_noir = pygame.transform.scale(self.pion_noir, (self.TAILLE_CASE, self.TAILLE_CASE))
+            pion_size = int(self.TAILLE_CASE * 0.8)
+            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
+            self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
         
-        # Variables de jeu
-        self.joueur_actuel = 1  # 1 pour joueur noir, 2 pour joueur blanc
+        self.joueur_actuel = 1
         self.running = True
         
-        # Boucle de jeu
         while self.running:
             if self.background_image:
                 self.ecran.blit(self.background_image, (0, 0))
             else:
                 self.ecran.fill(self.BLANC)
             
-            # Dessiner le plateau
             self.dessiner_plateau()
             self.afficher_pions()
             self.afficher_cases_bloquees()
             
-            # Afficher les informations de jeu
             if not self.game_over:
                 self.afficher_tour()
                 self.afficher_info_jeu()
             else:
                 self.afficher_fin_de_jeu()
             
-            # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
-                    self.gerer_clic()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:  # R pour recommencer
+                    x, y = event.pos
+                    if self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
+                        self.game_over = True
+                        self.gagnant = "abandon"
+                    else:
+                        self.gerer_clic()
+                elif event.type == pygame.MOUSEBUTTONDOWN and self.game_over:
+                    x, y = event.pos
+                    if self.bouton_rejouer.collidepoint(x, y):
                         self.reinitialiser_jeu()
+                    elif self.bouton_quitter.collidepoint(x, y):
+                        self.running = False
+                # Suppression du reset avec la touche R
+                # elif event.type == pygame.KEYDOWN:
+                #     if event.key == pygame.K_r:  # R pour recommencer
+                #         self.reinitialiser_jeu()
             
             pygame.display.flip()
         
@@ -356,73 +364,106 @@ class Plateau_pion:
 
     def afficher_pions(self):
         """Affiche tous les pions placés sur le plateau"""
+        pion_size = int(self.TAILLE_CASE * 0.8)  # même réduction que dans run
+        offset = (self.TAILLE_CASE - pion_size) // 2
         for i in range(8):
             for j in range(8):
                 if self.plateau[i][j] == 1:
                     if self.pion_noir:
-                        self.ecran.blit(self.pion_noir, 
-                                        (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                         self.OFFSET_Y + i * self.TAILLE_CASE))
+                        self.ecran.blit(self.pion_noir,
+                                        (self.OFFSET_X + j * self.TAILLE_CASE + offset,
+                                         self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                     else:
-                        # Fallback: cercle noir
+                        # Fallback: cercle noir plus petit
                         pygame.draw.circle(self.ecran, self.NOIR,
                                          (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
                                           self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         self.TAILLE_CASE//3)
+                                         pion_size//2)
                 elif self.plateau[i][j] == 2:
                     if self.pion_blanc:
-                        self.ecran.blit(self.pion_blanc, 
-                                        (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                         self.OFFSET_Y + i * self.TAILLE_CASE))
+                        self.ecran.blit(self.pion_blanc,
+                                        (self.OFFSET_X + j * self.TAILLE_CASE + offset,
+                                         self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                     else:
-                        # Fallback: cercle blanc avec bordure noire
+                        # Fallback: cercle blanc plus petit avec bordure noire
                         pygame.draw.circle(self.ecran, self.BLANC,
                                          (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
                                           self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         self.TAILLE_CASE//3)
+                                         pion_size//2)
                         pygame.draw.circle(self.ecran, self.NOIR,
                                          (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
                                           self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         self.TAILLE_CASE//3, 3)
+                                         pion_size//2, 3)
 
     def afficher_tour(self):
         """Affiche le tour du joueur actuel"""
-        font = pygame.font.Font(None, 36)
-        joueur_nom = "Noir" if self.joueur_actuel == 1 else "Blanc"
-        texte = f"Tour du joueur {joueur_nom} - Placez votre pion"
-        couleur = self.NOIR if self.joueur_actuel == 1 else self.BLEU
-        surface_texte = font.render(texte, True, couleur)
-        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 20))
+        police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
+        joueur_nom = "Joueur 1" if self.joueur_actuel == 1 else "Joueur 2"
+        texte = f"Tour de {joueur_nom} - Placez votre pion"
+        couleur = self.NOIR if self.joueur_actuel == 1 else self.BLANC
+        surface_texte = police.render(texte, True, couleur)
+        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 70))
 
     def afficher_info_jeu(self):
-        """Affiche les informations du jeu"""
-        font = pygame.font.Font(None, 24)
+        police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 25)
         cases_libres = self.compter_cases_libres_par_joueur()
-        texte = f"Cases libres restantes: {cases_libres} | Appuyez sur R pour recommencer"
-        surface_texte = font.render(texte, True, self.NOIR)
-        self.ecran.blit(surface_texte, (20, self.HAUTEUR - 40))
+        texte = f"Cases libres restantes: {cases_libres}"
+        surface_texte = police.render(texte, True, self.NOIR)
+        self.ecran.blit(surface_texte, (20, self.HAUTEUR - 60))
+
+        # Bouton abandonner (affiché seulement si la partie n'est pas finie)
+        if not self.game_over:
+            largeur_bouton = 220
+            hauteur_bouton = 50
+            self.bouton_abandonner = pygame.Rect(
+                self.LARGEUR - largeur_bouton - 30,
+                self.HAUTEUR - hauteur_bouton - 30,
+                largeur_bouton,
+                hauteur_bouton
+            )
+            pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_abandonner, border_radius=20)
+            texte_abandonner = police.render("Abandonner", True, self.BLANC)
+            rect_texte_abandonner = texte_abandonner.get_rect(center=self.bouton_abandonner.center)
+            self.ecran.blit(texte_abandonner, rect_texte_abandonner)
+        else:
+            self.bouton_abandonner = None
 
     def afficher_fin_de_jeu(self):
-        """Affiche l'écran de fin de jeu"""
-        font_grand = pygame.font.Font(None, 48)
-        font_petit = pygame.font.Font(None, 32)
-        
-        # Déterminer le gagnant (le dernier joueur qui a pu jouer)
-        gagnant_nom = "Blanc" if self.joueur_actuel == 1 else "Noir"  # L'autre joueur a gagné
-        
-        texte_principal = f"Joueur {gagnant_nom} gagne!"
-        texte_secondary = "Plus aucune case disponible! Appuyez sur R pour rejouer"
-        
-        surface_principale = font_grand.render(texte_principal, True, self.BLANC)
-        surface_secondary = font_petit.render(texte_secondary, True, self.BLANC)
-        
-        # Centrer les textes
-        self.ecran.blit(surface_principale, 
-                       (self.LARGEUR // 2 - surface_principale.get_width() // 2, 
-                        self.HAUTEUR // 2 - 100))
-        self.ecran.blit(surface_secondary, 
-                       (self.LARGEUR // 2 - surface_secondary.get_width() // 2, 
-                        self.HAUTEUR // 2 - 50))
+        police_grand = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
+        gagnant_nom = "Joueur 2" if self.joueur_actuel == 1 else "Joueur 1"
+        texte_principal = f"{gagnant_nom} gagne !"
+        surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        self.ecran.blit(surface_principale, (
+            self.LARGEUR // 2 - surface_principale.get_width() // 2,
+            self.HAUTEUR // 2 - 100
+        ))
+
+        # Bouton Rejouer
+        largeur_bouton = 250
+        hauteur_bouton = 60
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+        self.bouton_rejouer = pygame.Rect(
+            self.LARGEUR // 2 - largeur_bouton - 20,
+            self.HAUTEUR // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.BLEU, self.bouton_rejouer, border_radius=20)
+        texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
+        rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
+        self.ecran.blit(texte_rejouer, rect_texte_rejouer)
+
+        # Bouton Quitter
+        self.bouton_quitter = pygame.Rect(
+            self.LARGEUR // 2 + 20,
+            self.HAUTEUR // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_quitter, border_radius=20)
+        texte_quitter = police_bouton.render("Quitter", True, self.BLANC)
+        rect_texte_quitter = texte_quitter.get_rect(center=self.bouton_quitter.center)
+        self.ecran.blit(texte_quitter, rect_texte_quitter)
 
     def gerer_clic(self):
         """Gère les clics de souris pour placer les pions"""
