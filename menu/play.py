@@ -1,4 +1,5 @@
 import pygame
+from menu.menu_mode import MenuMode 
 
 class Play:
     def __init__(self):
@@ -112,27 +113,22 @@ class Play:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     en_cours = False
-                
+
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
-                    
+
                     # Vérifier le clic sur le bouton retour
                     if self.bouton_retour["rect"].collidepoint(x, y):
                         en_cours = False
-                    
-                    # Vérifier les clics sur les boutons de paramètres
+
+                    # Vérifier les clics sur les boutons de jeux
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
-                            if nom == "Katarenga":
-                                print("jeu Katarenga")
-                                # TODO: 
-                            elif nom == "Isolation":
-                                print("jeu Isolation")
-                                # TODO: 
-                            elif nom == "Congress":
-                                print("jeu Congress")
-                                # TODO: 
-            
+                            mode = MenuMode(self.LARGEUR, self.HAUTEUR).afficher()
+                            print(f"Lancer {nom} en mode : {mode}")
+                            # Ici, lance le jeu correspondant avec le mode choisi
+                            break  # On sort de la boucle for pour éviter plusieurs actions
+
             self.dessiner()
             pygame.display.flip()
         
@@ -141,4 +137,3 @@ class Play:
 if __name__ == "__main__":
     start = Play()
     start.executer()
-    
