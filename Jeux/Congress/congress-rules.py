@@ -110,7 +110,7 @@ class Plateau_pion:
         # Charger le fichier JSON contenant les chemins d'images
         
         try:
-            with open("plateaux/plateau_0.json", 'r') as f:
+            with open("plateaux/plateau_17.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
@@ -211,7 +211,7 @@ class Plateau_pion:
         #Vérifier la couleur de la case de départ
         # Obtenir la position de l'image sur le plateau
         try:
-            with open("plateaux/plateau_0.json", 'r') as f:
+            with open("plateaux/plateau_17.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Vérifier si les indices sont dans les limites du plateau
