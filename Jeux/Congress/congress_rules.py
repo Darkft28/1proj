@@ -108,37 +108,40 @@ class Plateau_pion:
     
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
-        
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
-            if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
-                # Répéter les motifs pour atteindre 8x8
-                plateau_complet = []
-                for i in range(8):
-                    ligne = []
-                    for j in range(8):
-                        ligne.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
-                    plateau_complet.append(ligne)
-                plateau_images = plateau_complet
-            
+            with open("plateaux/plateau_final.json", 'r') as f:
+                plateau_data = json.load(f)
+                plateau_images = plateau_data["cases"]
+
+            # Créer un plateau 8x8 en répétant le motif 4x4
+            plateau_complet = []
+            for i in range(8):
+                ligne = []
+                for j in range(8):
+                    # Utiliser le modulo pour répéter le motif 4x4
+                    ligne.append(plateau_images[i % 4][j % 4])
+                plateau_complet.append(ligne)
+                
             # Dessiner les images du plateau
             for i in range(8):
                 for j in range(8):
-                    image_path = plateau_images[i][j]
+                    image_path = plateau_complet[i][j]
                     
                     # Charger l'image si elle n'est pas déjà en cache
                     if image_path not in self.images:
-                        self.images[image_path] = pygame.image.load(image_path).convert_alpha()
-                        self.images[image_path] = pygame.transform.scale(self.images[image_path], 
-                                                                       (self.TAILLE_CASE, self.TAILLE_CASE))
+                        try:
+                            self.images[image_path] = pygame.image.load(image_path).convert_alpha()
+                            self.images[image_path] = pygame.transform.scale(self.images[image_path], 
+                                                                        (self.TAILLE_CASE, self.TAILLE_CASE))
+                        except pygame.error as e:
+                            print(f"Erreur lors du chargement de l'image {image_path}: {e}")
+                            continue
                     
                     # Dessiner l'image
                     self.ecran.blit(self.images[image_path], 
-                                  (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                   self.OFFSET_Y + i * self.TAILLE_CASE))
+                                (self.OFFSET_X + j * self.TAILLE_CASE, 
+                                self.OFFSET_Y + i * self.TAILLE_CASE))
+
         except Exception as e:
             print(f"Erreur lors du chargement du plateau: {e}")
             # Fallback: dessiner un damier basique
@@ -146,9 +149,9 @@ class Plateau_pion:
                 for j in range(8):
                     couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
                     pygame.draw.rect(self.ecran, couleur, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                     self.OFFSET_Y + i * self.TAILLE_CASE, 
-                                     self.TAILLE_CASE, self.TAILLE_CASE))
+                                   (self.OFFSET_X + j * self.TAILLE_CASE, 
+                                    self.OFFSET_Y + i * self.TAILLE_CASE, 
+                                    self.TAILLE_CASE, self.TAILLE_CASE))
     
     def afficher_plateau(self):
         for i in range(8):
@@ -208,39 +211,29 @@ class Plateau_pion:
         if self.plateau[ligne_arr][col_arr] != 0:
             return False
         
-        #Vérifier la couleur de la case de départ
-        # Obtenir la position de l'image sur le plateau
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            # Vérifier si les indices sont dans les limites du plateau
-            if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
-                return False
-                
-            image_path = plateau_images[ligne_dep][col_dep]
+            with open("plateaux/plateau_final.json", 'r') as f:
+                plateau_data = json.load(f)
+                plateau_images = plateau_data["cases"]
+        
+            # Convertir les coordonnées 8x8 en coordonnées 4x4
+            image_path = plateau_images[ligne_dep % 4][col_dep % 4]
             
             # Déterminer les mouvements valides selon la couleur
-            # Rouge: Tour
             if "rouge" in image_path.lower():
                 return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            # Bleu: Roi
             elif "bleu" in image_path.lower():
                 return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            # Jaune: Fou
             elif "jaune" in image_path.lower():
                 return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
-            # Vert: Cavalier
             elif "vert" in image_path.lower():
                 return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
             else:
-                # Par défaut: pas de restriction spéciale
                 return True
+                
         except Exception as e:
             print(f"Erreur lors de la vérification des règles de mouvement: {e}")
-            # Règle par défaut si le plateau JSON ne peut pas être lu
-            return (ligne_arr == ligne_dep or col_arr == col_dep or 
-                    abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep))
+            return False
     
     def deplacer_pion(self, depart, arrivee):
         ligne_dep, col_dep = depart
@@ -283,4 +276,4 @@ class Plateau_pion:
 # Lancement du jeu
 if __name__ == "__main__":
     jeu = Plateau_pion()
-    jeu.run() 
+    jeu.run()

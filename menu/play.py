@@ -1,4 +1,12 @@
 import pygame
+import sys
+import os
+
+# Add the project root directory to the Python path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(current_dir)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 class Play:
     def __init__(self):
@@ -130,15 +138,25 @@ class Play:
                                 print("jeu Isolation")
                                 # TODO: 
                             elif nom == "Congress":
-                                print("jeu Congress")
-                                # TODO: 
-            
+                                try:
+                                    # Import and run board selector
+                                    sys.path.append(project_root)  # Ensure path is set
+                                    from Board.board_complet import SelecteurPlateau
+                                    selecteur = SelecteurPlateau()
+                                    plateau_final = selecteur.executer()
+                                    
+                                    if plateau_final:  # Si un plateau a été créé
+                                        from Jeux.Congress.congress_rules import Plateau_pion
+                                        jeu = Plateau_pion()
+                                        jeu.run()
+                                    pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
+                                except ImportError as e:
+                                    print(f"Error importing modules: {e}")
+                                    print(f"Project root: {project_root}")
+                                    print(f"Current Python path: {sys.path}")
+        
             self.dessiner()
             pygame.display.flip()
         
-        # Retourne au menu principal sans quitter le jeu
-
-if __name__ == "__main__":
-    start = Play()
-    start.executer()
-    
+        pygame.quit()
+        sys.exit()

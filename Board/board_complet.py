@@ -495,6 +495,62 @@ class SelecteurPlateau:
                 # Si le bouton confirmer existe et est cliqué
                 if (bouton_confirmer and event.type == pygame.MOUSEBUTTONDOWN and 
                     event.button == 1 and bouton_confirmer.collidepoint(x, y)):
+                    # Créer le plateau final 8x8
+                    plateau_final = [[None for _ in range(8)] for _ in range(8)]
+                    
+                    # Pour chaque plateau 2x2 dans la grille
+                    for i in range(2):
+                        for j in range(2):
+                            if self.dropped_plateaux[i][j]:
+                                # Charger les données du plateau
+                                with open(f"plateaux/{self.dropped_plateaux[i][j]}", 'r') as f:
+                                    plateau_data = json.load(f)
+                                    
+                                    # Calculer les offsets pour le placement dans le plateau final
+                                    offset_ligne = i * 2
+                                    offset_col = j * 2
+                                    
+                                    # Copier directement les 4 cases du plateau 2x2
+                                    for ligne_source in range(2):
+                                        for col_source in range(2):
+                                            ligne_finale = offset_ligne + ligne_source
+                                            col_finale = offset_col + col_source
+                                            plateau_final[ligne_finale][col_finale] = plateau_data[ligne_source][col_source]
+
+                    # Créer la structure complète pour le JSON avec le plateau 4x4
+                    donnees_plateau = {
+                        "taille": 4,  # Changé à 4 car on ne répète plus le motif
+                        "cases": plateau_final[:4][:4],  # On ne garde que le plateau 4x4
+                        "pieces": {
+                            "rouge": [],
+                            "bleu": [],
+                            "jaune": [],
+                            "vert": []
+                        }
+                    }
+                    
+                    # Remplir les positions des pièces par couleur pour le plateau 4x4
+                    for i in range(4):  # Changé à 4 au lieu de 8
+                        for j in range(4):  # Changé à 4 au lieu de 8
+                            case = plateau_final[i][j]
+                            if case:
+                                if "rouge" in case:
+                                    donnees_plateau["pieces"]["rouge"].append([i, j])
+                                elif "bleue" in case:
+                                    donnees_plateau["pieces"]["bleu"].append([i, j])
+                                elif "jaune" in case:
+                                    donnees_plateau["pieces"]["jaune"].append([i, j])
+                                elif "verte" in case:
+                                    donnees_plateau["pieces"]["vert"].append([i, j])
+                    
+                    # Sauvegarder le plateau final dans un fichier JSON
+                    try:
+                        with open("plateau_final.json", 'w') as f:
+                            json.dump(donnees_plateau, f, indent=4)
+                        print("Plateau final sauvegardé dans 'plateau_final.json'")
+                    except Exception as e:
+                        print(f"Erreur lors de la sauvegarde du plateau final: {e}")
+                    
                     return self.dropped_plateaux
             
             pygame.display.flip()
