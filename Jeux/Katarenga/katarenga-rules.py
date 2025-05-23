@@ -112,7 +112,7 @@ class Plateau_pion:
     def transformer_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_katarenga.json", 'r') as f:
                 plateau_8 = json.load(f)
                 # Add a new first row filled with "assets/marrons.jpg"
                 plateau_8.insert(0, ["assets/marrons.jpg" for _ in range(8)])
@@ -120,7 +120,7 @@ class Plateau_pion:
                 plateau_8.append(["assets/marrons.jpg" for _ in range(8)])
                 
                 # Write the modified plateau back to the file
-                with open("plateaux/plateau_17.json", 'w') as fw:
+                with open("plateaux/plateau_katarenga.json", 'w') as fw:
                     json.dump(plateau_8, fw, indent=2)
 
         except Exception as e:
@@ -128,7 +128,7 @@ class Plateau_pion:
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_katarenga.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
@@ -236,7 +236,7 @@ class Plateau_pion:
             self.plateau[ligne_arr][col_arr] = self.joueur_actuel
         
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_katarenga.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Vérifier si les indices sont dans les limites du plateau
