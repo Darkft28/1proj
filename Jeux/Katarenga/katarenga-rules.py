@@ -56,7 +56,10 @@ class Plateau_pion:
         self.pion_blanc = pygame.image.load("assets/pion_blanc.png")
         self.pion_noir = pygame.image.load("assets/pion_noir.png")
 
-        #plateau de base
+        
+
+
+        #plateau de pions
         self.plateau = [[2, 2, 2, 2, 2, 2, 2, 2],
                         [0, 0, 0, 0, 0, 0, 0, 0],
                         [0, 0, 0, 0, 0, 0, 0, 0],
@@ -83,7 +86,7 @@ class Plateau_pion:
         self.joueur_actuel = 1  # 1 pour blanc, 2 pour noir
         self.pion_selectionne = None
         self.running = True
-        
+        self.transformer_plateau()
         # Boucle de jeu
         while self.running:
             self.ecran.blit(self.background_image, (0, 0))
@@ -105,7 +108,23 @@ class Plateau_pion:
             pygame.display.flip()
         
         pygame.quit()
-    
+
+    def transformer_plateau(self):
+        # Charger le fichier JSON contenant les chemins d'images
+        try:
+            with open("plateaux/plateau_17.json", 'r') as f:
+                plateau_8 = json.load(f)
+                # Add a new first row filled with "assets/marrons.jpg"
+                plateau_8.insert(0, ["assets/marrons.jpg" for _ in range(8)])
+                # Add a new last row filled with "assets/marrons.jpg"
+                plateau_8.append(["assets/marrons.jpg" for _ in range(8)])
+                
+                # Write the modified plateau back to the file
+                with open("plateaux/plateau_17.json", 'w') as fw:
+                    json.dump(plateau_8, fw, indent=2)
+
+        except Exception as e:
+            print(f"Erreur lors du chargement du plateau: {e}")
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
