@@ -435,7 +435,7 @@ class Plateau_pion:
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 600
+            self.HAUTEUR // 2 - 500
         ))
 
         # Bouton Rejouer
@@ -444,7 +444,7 @@ class Plateau_pion:
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2 - 500,
+            self.HAUTEUR // 2 - -450,
             largeur_bouton,
             hauteur_bouton
         )
@@ -456,7 +456,7 @@ class Plateau_pion:
         # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2 - 500,
+            self.HAUTEUR // 2 - -450,
             largeur_bouton,
             hauteur_bouton
         )
