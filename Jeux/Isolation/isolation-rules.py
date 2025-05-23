@@ -80,7 +80,6 @@ class Plateau_pion:
         self.gagnant = None
 
     def analyser_couleur_image(self, image_path):
-        """Analyse une image pour déterminer sa couleur dominante"""
         try:
             image = pygame.image.load(image_path)
             # Convertir en RGB pour analyse
@@ -109,7 +108,6 @@ class Plateau_pion:
             return self.ROUGE
 
     def get_cases_bloquees_par_pion(self, ligne, col, couleur_case):
-        """Retourne les cases qui seront bloquées par un pion placé à cette position"""
         cases_bloquees = []
         
         # Basé sur vos images des règles :
@@ -152,7 +150,6 @@ class Plateau_pion:
         return cases_bloquees
 
     def get_couleur_case(self, ligne, col):
-        """Retourne la couleur de la case à la position donnée basée sur le plateau JSON"""
         try:
             with open("plateaux/plateau_18.json", 'r') as f:
                 plateau_images = json.load(f)
@@ -196,14 +193,12 @@ class Plateau_pion:
                 return self.JAUNE
 
     def peut_placer_pion(self, ligne, col):
-        """Vérifie si un pion peut être placé à cette position"""
         # Case doit être vide et non bloquée
         return (0 <= ligne < 8 and 0 <= col < 8 and 
                 self.plateau[ligne][col] == 0 and 
                 not self.cases_bloquees[ligne][col])
 
     def placer_pion(self, ligne, col, joueur):
-        """Place un pion et bloque les cases selon les règles"""
         if not self.peut_placer_pion(ligne, col):
             return False
             
@@ -216,13 +211,12 @@ class Plateau_pion:
         
         # Marquer les cases comme bloquées
         for bl, bc in cases_a_bloquer:
-            if self.plateau[bl][bc] == 0:  # Ne bloquer que les cases vides
+            if self.plateau[bl][bc] == 0:
                 self.cases_bloquees[bl][bc] = True
                 
         return True
 
     def verifier_fin_de_jeu(self):
-        """Vérifie si le jeu est terminé (aucune case libre disponible)"""
         for i in range(8):
             for j in range(8):
                 if self.peut_placer_pion(i, j):
@@ -230,7 +224,6 @@ class Plateau_pion:
         return True
 
     def compter_cases_libres_par_joueur(self):
-        """Compte combien de cases chaque joueur peut encore utiliser"""
         # Dans cette version simplifiée, on compte juste les cases totalement libres
         cases_libres = 0
         for i in range(8):
@@ -281,17 +274,11 @@ class Plateau_pion:
                         self.reinitialiser_jeu()
                     elif self.bouton_quitter.collidepoint(x, y):
                         self.running = False
-                # Suppression du reset avec la touche R
-                # elif event.type == pygame.KEYDOWN:
-                #     if event.key == pygame.K_r:  # R pour recommencer
-                #         self.reinitialiser_jeu()
-            
             pygame.display.flip()
         
         pygame.quit()
 
     def reinitialiser_jeu(self):
-        """Remet le jeu à zéro"""
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
         self.cases_bloquees = [[False for _ in range(8)] for _ in range(8)]
         self.joueur_actuel = 1
@@ -299,7 +286,6 @@ class Plateau_pion:
         self.gagnant = None
 
     def dessiner_plateau(self):
-        """Dessine le plateau avec les couleurs de cases"""
         try:
             with open("plateaux/plateau_18.json", 'r') as f:
                 plateau_images = json.load(f)
@@ -352,7 +338,6 @@ class Plateau_pion:
                                      self.TAILLE_CASE, self.TAILLE_CASE), 2)
 
     def afficher_cases_bloquees(self):
-        """Affiche les cases bloquées en noir complet"""
         for i in range(8):
             for j in range(8):
                 if self.cases_bloquees[i][j]:
@@ -363,8 +348,7 @@ class Plateau_pion:
                                     self.TAILLE_CASE, self.TAILLE_CASE))
 
     def afficher_pions(self):
-        """Affiche tous les pions placés sur le plateau"""
-        pion_size = int(self.TAILLE_CASE * 0.8)  # même réduction que dans run
+        pion_size = int(self.TAILLE_CASE * 0.8)  
         offset = (self.TAILLE_CASE - pion_size) // 2
         for i in range(8):
             for j in range(8):
@@ -396,7 +380,6 @@ class Plateau_pion:
                                          pion_size//2, 3)
 
     def afficher_tour(self):
-        """Affiche le tour du joueur actuel"""
         police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
         joueur_nom = "Joueur 1" if self.joueur_actuel == 1 else "Joueur 2"
         texte = f"Tour de {joueur_nom} - Placez votre pion"
