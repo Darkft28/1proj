@@ -109,23 +109,24 @@ class Plateau_pion:
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_final.json", 'r') as f:
-                plateau_data = json.load(f)
-                plateau_images = plateau_data["cases"]
+            with open("plateaux/plateau_17.json", 'r') as f:
+                plateau_images = json.load(f)
+            
+            # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
+            if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
+                # Répéter les motifs pour atteindre 8x8
+                plateau_complet = []
+                for i in range(8):
+                    ligne = []
+                    for j in range(8):
+                        ligne.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
+                    plateau_complet.append(ligne)
+                plateau_images = plateau_complet
 
-            # Créer un plateau 8x8 en répétant le motif 4x4
-            plateau_complet = []
-            for i in range(8):
-                ligne = []
-                for j in range(8):
-                    # Utiliser le modulo pour répéter le motif 4x4
-                    ligne.append(plateau_images[i % 4][j % 4])
-                plateau_complet.append(ligne)
-                
             # Dessiner les images du plateau
             for i in range(8):
                 for j in range(8):
-                    image_path = plateau_complet[i][j]
+                    image_path = plateau_images[i][j]
                     
                     # Charger l'image si elle n'est pas déjà en cache
                     if image_path not in self.images:
@@ -212,12 +213,14 @@ class Plateau_pion:
             return False
         
         try:
-            with open("plateaux/plateau_final.json", 'r') as f:
-                plateau_data = json.load(f)
-                plateau_images = plateau_data["cases"]
-        
-            # Convertir les coordonnées 8x8 en coordonnées 4x4
-            image_path = plateau_images[ligne_dep % 4][col_dep % 4]
+            with open("plateaux/plateau_17.json", 'r') as f:
+                plateau_images = json.load(f)
+            
+            # Vérifier si les indices sont dans les limites du plateau
+            if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
+                return False
+                
+            image_path = plateau_images[ligne_dep][col_dep]
             
             # Déterminer les mouvements valides selon la couleur
             if "rouge" in image_path.lower():
