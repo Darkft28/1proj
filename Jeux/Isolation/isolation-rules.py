@@ -435,7 +435,7 @@ class Plateau_pion:
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 100
+            self.HAUTEUR // 2 - 500
         ))
 
         # Bouton Rejouer
@@ -444,7 +444,7 @@ class Plateau_pion:
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2,
+            self.HAUTEUR // 2 - -450,
             largeur_bouton,
             hauteur_bouton
         )
@@ -456,7 +456,7 @@ class Plateau_pion:
         # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2,
+            self.HAUTEUR // 2 - -450,
             largeur_bouton,
             hauteur_bouton
         )
@@ -466,7 +466,6 @@ class Plateau_pion:
         self.ecran.blit(texte_quitter, rect_texte_quitter)
 
     def gerer_clic(self):
-        """Gère les clics de souris pour placer les pions"""
         pos = pygame.mouse.get_pos()
         
         # Convertir la position en coordonnées de la grille
@@ -479,19 +478,13 @@ class Plateau_pion:
             
             # Tenter de placer un pion
             if self.placer_pion(ligne, col, self.joueur_actuel):
-                print(f"Pion du joueur {self.joueur_actuel} placé en ({ligne}, {col})")
-                
-                # Changer de joueur
-                self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
-                
+                self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1                
                 # Vérifier si le jeu est terminé
                 if self.verifier_fin_de_jeu():
                     self.game_over = True
-                    print("Jeu terminé!")
-                    
+                    print("Jeu terminé!")                    
             else:
                 print("Impossible de placer un pion ici!")
-
 
 # Lancement du jeu
 if __name__ == "__main__":
