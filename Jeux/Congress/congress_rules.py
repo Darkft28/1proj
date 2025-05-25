@@ -1,6 +1,7 @@
 import pygame
 import sys
 import json
+
 class Plateau_pion:
     def __init__(self):
         pygame.init()
@@ -36,6 +37,8 @@ class Plateau_pion:
         self.BLEU = (29, 185, 242)
         self.JAUNE = (235, 226, 56)
         self.VERT = (24, 181, 87)
+        self.ORANGE = (255, 165, 0)  # Pour la prévisualisation
+        self.VERT_PREVIEW = (0, 255, 0, 128)  # Vert semi-transparent pour les mouvements possibles
 
         self.images = {}
         try:
@@ -51,12 +54,11 @@ class Plateau_pion:
             print(f"Erreur lors du chargement des images: {e}")
             sys.exit(1)
 
-
-        #pions
+        # Pions
         self.pion_blanc = pygame.image.load("assets/pion_blanc.png")
         self.pion_noir = pygame.image.load("assets/pion_noir.png")
 
-        #plateau de base
+        # Plateau de base
         self.plateau = [[0, 2, 0, 1, 2, 0, 1, 0],
                         [1, 0, 0, 0, 0, 0, 0, 2],
                         [0, 0, 0, 0, 0, 0, 0, 0],
@@ -64,17 +66,53 @@ class Plateau_pion:
                         [1, 0, 0, 0, 0, 0, 0, 2],
                         [0, 0, 0, 0, 0, 0, 0, 0],
                         [2, 0, 0, 0, 0, 0, 0, 1],
-                        [0, 1 ,0 ,2 ,1 , 0,2 ,0]]
+                        [0, 1, 0, 2, 1, 0, 2, 0]]
         
         # Configuration des boutons
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
 
+    def get_couleur_case(self, ligne, col):
+        """Récupère la couleur d'une case depuis le fichier JSON"""
+        try:
+            with open("plateaux/plateau_17.json", 'r') as f:
+                plateau_images = json.load(f)
+            
+            # Vérifier si les indices sont dans les limites du plateau
+            if ligne >= len(plateau_images) or col >= len(plateau_images[0]):
+                return None
+                
+            image_path = plateau_images[ligne][col]
+            
+            # Déterminer la couleur selon le nom de fichier
+            if "rouge" in image_path.lower():
+                return "rouge"
+            elif "bleu" in image_path.lower():
+                return "bleu"
+            elif "jaune" in image_path.lower():
+                return "jaune"
+            elif "vert" in image_path.lower():
+                return "vert"
+            else:
+                return None
+                
+        except Exception as e:
+            print(f"Erreur lors de la détection de couleur: {e}")
+            return None
+
+    def get_mouvements_possibles(self, ligne, col):
+        """Retourne la liste des mouvements possibles pour un pion à la position donnée"""
+        mouvements = []
         
+        for i in range(8):
+            for j in range(8):
+                if self.mouvement_valide((ligne, col), (i, j)):
+                    mouvements.append((i, j))
+        
+        return mouvements
+
     def run(self):
-        
-        
         # Redimensionner les pions
         self.pion_blanc = pygame.transform.scale(self.pion_blanc, (self.TAILLE_CASE, self.TAILLE_CASE))
         self.pion_noir = pygame.transform.scale(self.pion_noir, (self.TAILLE_CASE, self.TAILLE_CASE))
@@ -82,17 +120,16 @@ class Plateau_pion:
         # Variables de jeu
         self.joueur_actuel = 1  # 1 pour blanc, 2 pour noir
         self.pion_selectionne = None
+        self.mouvements_possibles = []  # Liste des mouvements possibles pour le pion sélectionné
         self.running = True
         
         # Boucle de jeu
         while self.running:
             self.ecran.blit(self.background_image, (0, 0))
-            
-            # Dessiner le plateau
             self.dessiner_plateau()
+            self.afficher_preview_mouvements()
             self.afficher_plateau()
-            
-            # Afficher le tour du joueur
+            self.afficher_pion_selectionne()
             self.afficher_tour()
             
             # Gestion des événements
@@ -105,6 +142,35 @@ class Plateau_pion:
             pygame.display.flip()
         
         pygame.quit()
+
+    def afficher_preview_mouvements(self):
+        """Affiche les cases où le pion sélectionné peut se déplacer"""
+        if self.pion_selectionne and self.mouvements_possibles:
+            # Créer une surface transparente pour les overlays
+            overlay = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
+            overlay.fill(self.VERT_PREVIEW)
+            
+            for ligne, col in self.mouvements_possibles:
+                # Dessiner un overlay vert semi-transparent
+                self.ecran.blit(overlay, 
+                              (self.OFFSET_X + col * self.TAILLE_CASE, 
+                               self.OFFSET_Y + ligne * self.TAILLE_CASE))
+                
+                # Dessiner un contour vert pour plus de visibilité
+                pygame.draw.rect(self.ecran, self.VERT, 
+                               (self.OFFSET_X + col * self.TAILLE_CASE, 
+                                self.OFFSET_Y + ligne * self.TAILLE_CASE, 
+                                self.TAILLE_CASE, self.TAILLE_CASE), 3)
+
+    def afficher_pion_selectionne(self):
+        """Surligne le pion actuellement sélectionné"""
+        if self.pion_selectionne:
+            ligne, col = self.pion_selectionne
+            # Dessiner un contour orange épais autour du pion sélectionné
+            pygame.draw.rect(self.ecran, self.ORANGE, 
+                           (self.OFFSET_X + col * self.TAILLE_CASE, 
+                            self.OFFSET_Y + ligne * self.TAILLE_CASE, 
+                            self.TAILLE_CASE, self.TAILLE_CASE), 5)
     
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
@@ -186,11 +252,15 @@ class Plateau_pion:
                 # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
                     self.pion_selectionne = (ligne, col)
+                    # Calculer les mouvements possibles pour ce pion
+                    self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
+                    print(f"Pion sélectionné en ({ligne}, {col}). {len(self.mouvements_possibles)} mouvements possibles.")
             else:
                 # Déplacement d'un pion
                 if self.mouvement_valide(self.pion_selectionne, (ligne, col)):
                     self.deplacer_pion(self.pion_selectionne, (ligne, col))
                     self.pion_selectionne = None
+                    self.mouvements_possibles = []  # Effacer la prévisualisation
                     self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
                     
                     # Vérifier si un joueur a gagné
@@ -201,8 +271,15 @@ class Plateau_pion:
                         print("Le joueur Noir a gagné!")
                         self.running = False
                 else:
-                    # Annuler la sélection si le mouvement est invalide
-                    self.pion_selectionne = None
+                    # Si on clique sur un autre pion du même joueur, le sélectionner
+                    if self.plateau[ligne][col] == self.joueur_actuel:
+                        self.pion_selectionne = (ligne, col)
+                        self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
+                        print(f"Nouveau pion sélectionné en ({ligne}, {col}). {len(self.mouvements_possibles)} mouvements possibles.")
+                    else:
+                        # Annuler la sélection si le mouvement est invalide
+                        self.pion_selectionne = None
+                        self.mouvements_possibles = []
     
     def mouvement_valide(self, depart, arrivee):
         ligne_dep, col_dep = depart
@@ -212,31 +289,95 @@ class Plateau_pion:
         if self.plateau[ligne_arr][col_arr] != 0:
             return False
         
-        try:
-            with open("plateaux/plateau_17.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            # Vérifier si les indices sont dans les limites du plateau
-            if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
-                return False
-                
-            image_path = plateau_images[ligne_dep][col_dep]
-            
-            # Déterminer les mouvements valides selon la couleur
-            if "rouge" in image_path.lower():
-                return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            elif "bleu" in image_path.lower():
-                return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            elif "jaune" in image_path.lower():
-                return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
-            elif "vert" in image_path.lower():
-                return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
-            else:
-                return True
-                
-        except Exception as e:
-            print(f"Erreur lors de la vérification des règles de mouvement: {e}")
+        # Ne pas permettre de rester sur place
+        if ligne_dep == ligne_arr and col_dep == col_arr:
             return False
+            
+        couleur_case = self.get_couleur_case(ligne_dep, col_dep)
+        if not couleur_case:
+            return False
+        
+        # Déterminer les mouvements valides selon la couleur
+        if couleur_case == "rouge":  # Tour - mouvement ligne/colonne jusqu'à obstacle ou case rouge
+            return self.mouvement_tour(ligne_dep, col_dep, ligne_arr, col_arr)
+        elif couleur_case == "bleu":  # Roi - 8 cases adjacentes
+            return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_arr) <= 1
+        elif couleur_case == "jaune":  # Fou - mouvement diagonal jusqu'à obstacle ou case jaune
+            return self.mouvement_fou(ligne_dep, col_dep, ligne_arr, col_arr)
+        elif couleur_case == "vert":  # Cavalier - mouvement en L
+            return ((abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or 
+                    (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2))
+        else:
+            return True
+
+    def mouvement_tour(self, ligne_dep, col_dep, ligne_arr, col_arr):
+        """Vérifie si un mouvement de tour est valide (ligne/colonne jusqu'à obstacle ou case rouge)"""
+        # Vérifier que c'est bien un mouvement en ligne ou en colonne
+        if ligne_dep != ligne_arr and col_dep != col_arr:
+            return False
+        
+        # Calculer la direction
+        if ligne_dep == ligne_arr:  # Mouvement horizontal
+            direction = 1 if col_arr > col_dep else -1
+            col_actuel = col_dep + direction
+            
+            while col_actuel != col_arr:
+                # Vérifier s'il y a un obstacle (pion)
+                if self.plateau[ligne_dep][col_actuel] != 0:
+                    return False
+                
+                # Vérifier si on rencontre une case rouge (arrêt obligatoire)
+                couleur = self.get_couleur_case(ligne_dep, col_actuel)
+                if couleur == "rouge":
+                    return False
+                
+                col_actuel += direction
+                
+        else:  # Mouvement vertical
+            direction = 1 if ligne_arr > ligne_dep else -1
+            ligne_actuel = ligne_dep + direction
+            
+            while ligne_actuel != ligne_arr:
+                # Vérifier s'il y a un obstacle (pion)
+                if self.plateau[ligne_actuel][col_dep] != 0:
+                    return False
+                
+                # Vérifier si on rencontre une case rouge (arrêt obligatoire)
+                couleur = self.get_couleur_case(ligne_actuel, col_dep)
+                if couleur == "rouge":
+                    return False
+                
+                ligne_actuel += direction
+        
+        return True
+
+    def mouvement_fou(self, ligne_dep, col_dep, ligne_arr, col_arr):
+        """Vérifie si un mouvement de fou est valide (diagonal jusqu'à obstacle ou case jaune)"""
+        # Vérifier que c'est bien un mouvement diagonal
+        if abs(ligne_arr - ligne_dep) != abs(col_arr - col_dep):
+            return False
+        
+        # Calculer les directions
+        dir_ligne = 1 if ligne_arr > ligne_dep else -1
+        dir_col = 1 if col_arr > col_dep else -1
+        
+        ligne_actuel = ligne_dep + dir_ligne
+        col_actuel = col_dep + dir_col
+        
+        while ligne_actuel != ligne_arr or col_actuel != col_arr:
+            # Vérifier s'il y a un obstacle (pion)
+            if self.plateau[ligne_actuel][col_actuel] != 0:
+                return False
+            
+            # Vérifier si on rencontre une case jaune (arrêt obligatoire)
+            couleur = self.get_couleur_case(ligne_actuel, col_actuel)
+            if couleur == "jaune":
+                return False
+            
+            ligne_actuel += dir_ligne
+            col_actuel += dir_col
+        
+        return True
     
     def deplacer_pion(self, depart, arrivee):
         ligne_dep, col_dep = depart
