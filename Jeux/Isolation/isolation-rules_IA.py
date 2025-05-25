@@ -87,38 +87,10 @@ class Plateau_pion:
         self.delai_ia = 1000    # Délai en millisecondes avant que l'IA joue
         self.temps_derniere_action = 0
 
-    def analyser_couleur_image(self, image_path):
-        try:
-            image = pygame.image.load(image_path)
-            # Convertir en RGB pour analyse
-            pixel_array = pygame.surfarray.array3d(image)
-            
-            # Calculer la couleur moyenne
-            moyenne_r = pixel_array[:,:,0].mean()
-            moyenne_g = pixel_array[:,:,1].mean()
-            moyenne_b = pixel_array[:,:,2].mean()
-            
-            # Déterminer la couleur dominante
-            if moyenne_r > 150 and moyenne_g < 100 and moyenne_b < 100:
-                return self.ROUGE
-            elif moyenne_r < 100 and moyenne_g < 100 and moyenne_b > 150:
-                return self.BLEU
-            elif moyenne_r < 100 and moyenne_g > 150 and moyenne_b < 100:
-                return self.VERT
-            elif moyenne_r > 200 and moyenne_g > 200 and moyenne_b < 150:
-                return self.JAUNE
-            else:
-                # Couleur non identifiée, utiliser rouge par défaut
-                return self.ROUGE
-                
-        except Exception as e:
-            print(f"Erreur lors de l'analyse de couleur de {image_path}: {e}")
-            return self.ROUGE
-
     def get_cases_bloquees_par_pion(self, ligne, col, couleur_case):
         cases_bloquees = []
         
-        # Basé sur vos images des règles :
+        # Basé sur les règles du jeu :
         if couleur_case == self.BLEU:  # Case bleue - mouvement de roi (8 directions adjacentes)
             directions = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
             for dl, dc in directions:
@@ -175,7 +147,7 @@ class Plateau_pion:
             # Récupérer le chemin de l'image pour cette case
             image_path = plateau_images[ligne][col]
             
-            # Déterminer la couleur selon le nom/chemin de l'image
+            # Déterminer la couleur UNIQUEMENT selon le nom/chemin de l'image
             if "rouge" in image_path.lower() or "red" in image_path.lower():
                 return self.ROUGE
             elif "bleu" in image_path.lower() or "blue" in image_path.lower():
@@ -185,12 +157,19 @@ class Plateau_pion:
             elif "jaune" in image_path.lower() or "yellow" in image_path.lower():
                 return self.JAUNE
             else:
-                # Fallback: analyser l'image pour détecter la couleur dominante
-                return self.analyser_couleur_image(image_path)
+                # Fallback vers le pattern mathématique
+                if (ligne + col) % 4 == 0:
+                    return self.ROUGE
+                elif (ligne + col) % 4 == 1:
+                    return self.BLEU
+                elif (ligne + col) % 4 == 2:
+                    return self.VERT
+                else:
+                    return self.JAUNE
                 
         except Exception as e:
             print(f"Erreur lors de la détection de couleur: {e}")
-            # Fallback vers le pattern original
+            # Fallback vers le pattern mathématique
             if (ligne + col) % 4 == 0:
                 return self.ROUGE
             elif (ligne + col) % 4 == 1:
@@ -207,7 +186,6 @@ class Plateau_pion:
                 not self.cases_bloquees[ligne][col])
 
     def get_cases_legales(self):
-        """Retourne la liste de toutes les cases où un pion peut être placé"""
         cases_legales = []
         for i in range(8):
             for j in range(8):
@@ -234,11 +212,9 @@ class Plateau_pion:
         return True
 
     def jouer_ia(self):
-        """L'IA choisit une case aléatoire parmi les cases légales"""
         cases_legales = self.get_cases_legales()
         
         if not cases_legales:
-            # Aucune case légale, l'IA ne peut pas jouer
             return False
             
         # Choisir une case aléatoire
@@ -252,7 +228,6 @@ class Plateau_pion:
         return len(cases_legales) == 0
 
     def compter_cases_libres_par_joueur(self):
-        # Dans cette version simplifiée, on compte juste les cases totalement libres
         return len(self.get_cases_legales())
 
     def run(self):
@@ -442,7 +417,7 @@ class Plateau_pion:
             texte = "Votre tour - Placez votre pion"
             couleur = self.NOIR
         else:
-            texte = "L'ordinateur réfléchit..."
+            texte = "L'ordinateur reflechit..."
             couleur = self.BLANC
         
         surface_texte = police.render(texte, True, couleur)
@@ -455,7 +430,7 @@ class Plateau_pion:
         surface_texte = police.render(texte, True, self.NOIR)
         self.ecran.blit(surface_texte, (20, self.HAUTEUR - 60))
 
-        # Bouton abandonner (affiché seulement si la partie n'est pas finie)
+        # Bouton abandonner 
         if not self.game_over:
             largeur_bouton = 220
             hauteur_bouton = 50
