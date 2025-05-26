@@ -43,7 +43,7 @@ class Plateau_pion:
                 self.ROUGE: "assets/image_rouge.png",
                 self.BLEU: "assets/image_bleue.png",
                 self.JAUNE: "assets/image_jaune.png",
-                self.VERT: "assets/image_verte.png"
+                self.VERT: "assets/image_verte.png",
             }
             for couleur, path in image_paths.items():
                 self.images[couleur] = pygame.image.load(path).convert_alpha()
@@ -51,7 +51,9 @@ class Plateau_pion:
             print(f"Erreur lors du chargement des images: {e}")
             sys.exit(1)
 
-
+        # Bords et coins
+        self.BORDURE = "assets/bordure.png"
+        self.COINS = "assets/coin.png"
         #pions
         self.pion_blanc = pygame.image.load("assets/pion_blanc.png")
         self.pion_noir = pygame.image.load("assets/pion_noir.png")
@@ -60,14 +62,16 @@ class Plateau_pion:
 
 
         #plateau de pions
-        self.plateau = [[2, 2, 2, 2, 2, 2, 2, 2],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 0],
-                        [1, 1, 1, 1, 1, 1, 1, 1]]
+        self.plateau = [[0, 10, 10, 10, 10, 10, 10, 10, 10, 0],
+                        [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 1, 1, 1, 1, 1, 1, 1, 1, 10],
+                        [0, 10, 10, 10, 10, 10, 10, 10, 10, 0]]
         
         # Configuration des boutons
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
@@ -114,14 +118,26 @@ class Plateau_pion:
         try:
             with open("plateaux/plateau_katarenga.json", 'r') as f:
                 plateau_8 = json.load(f)
-                # Add a new first row filled with "assets/marrons.jpg"
-                plateau_8.insert(0, ["assets/marrons.jpg" for _ in range(8)])
-                # Add a new last row filled with "assets/marrons.jpg"
-                plateau_8.append(["assets/marrons.jpg" for _ in range(8)])
                 
-                # Write the modified plateau back to the file
+                plateau_8.insert(0, [self.BORDURE for _ in range(8)])
+                
+                plateau_8.append([self.BORDURE for _ in range(8)])
+
+                for row in plateau_8:
+                    row.insert(0, self.BORDURE)
+                    row.append(self.BORDURE)
+
+                #Coins
+                plateau_8[0][0] = self.COINS
+                plateau_8[0][9] = self.COINS
+                plateau_8[9][0] = self.COINS
+                plateau_8[9][9] = self.COINS
+                
                 with open("plateaux/plateau_katarenga.json", 'w') as fw:
                     json.dump(plateau_8, fw, indent=2)
+                fw.close()
+            f.close()
+
 
         except Exception as e:
             print(f"Erreur lors du chargement du plateau: {e}")
@@ -143,8 +159,8 @@ class Plateau_pion:
                 plateau_images = plateau_complet
 
             # Dessiner les images du plateau
-            for i in range(8):
-                for j in range(8):
+            for i in range(10):
+                for j in range(10):
                     image_path = plateau_images[i][j]
                     
                     # Charger l'image si elle n'est pas déjà en cache
@@ -174,8 +190,8 @@ class Plateau_pion:
                                     self.TAILLE_CASE, self.TAILLE_CASE))
     
     def afficher_plateau(self):
-        for i in range(8):
-            for j in range(8):
+        for i in range(1, 9):
+            for j in range(1, 9):
                 if self.plateau[i][j] == 1:
                     self.ecran.blit(self.pion_blanc, 
                                     (self.OFFSET_X + j * self.TAILLE_CASE, 
@@ -200,7 +216,7 @@ class Plateau_pion:
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
         
         # Vérifier si le clic est dans les limites du plateau
-        if 0 <= ligne < 8 and 0 <= col < 8:
+        if 1 <= ligne < 9 and 1 <= col < 9:
             if self.pion_selectionne is None:
                 # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
