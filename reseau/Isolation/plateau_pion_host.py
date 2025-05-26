@@ -112,11 +112,9 @@ class Plateau_pion_host:
         self.initialiser_serveur()
 
     def generer_code_salon(self):
-        """Génère un code de salon aléatoire"""
         return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     
     def obtenir_ip_locale(self):
-        """Obtient l'adresse IP locale"""
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))
@@ -127,7 +125,6 @@ class Plateau_pion_host:
             return "127.0.0.1"
     
     def initialiser_serveur(self):
-        """Initialise le serveur socket"""
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.ip_locale, self.port))
@@ -139,7 +136,6 @@ class Plateau_pion_host:
         thread_accepter.start()
     
     def accepter_connexion(self):
-        """Accepte une connexion client"""
         print(f"Serveur en attente sur {self.ip_locale}:{self.port}")
         self.client_socket, adresse = self.server_socket.accept()
         print(f"Connexion acceptée de {adresse}")
@@ -159,7 +155,6 @@ class Plateau_pion_host:
             thread_recevoir.start()
     
     def recevoir_messages(self):
-        """Reçoit les messages du client"""
         while self.connexion_etablie:
             try:
                 message = self.client_socket.recv(1024).decode()
@@ -173,7 +168,6 @@ class Plateau_pion_host:
         self.connexion_etablie = False
     
     def traiter_message(self, message):
-        """Traite un message reçu"""
         if message.startswith("MOVE:"):
             # Format: MOVE:ligne,col
             coords = message.split(":")[1].split(",")
@@ -193,7 +187,6 @@ class Plateau_pion_host:
             self.gagnant = "abandon_adversaire"
     
     def envoyer_message(self, message):
-        """Envoie un message au client"""
         if self.connexion_etablie and self.client_socket:
             try:
                 self.client_socket.send(message.encode())
@@ -201,7 +194,6 @@ class Plateau_pion_host:
                 self.connexion_etablie = False
     
     def afficher_ecran_attente(self):
-        """Affiche l'écran d'attente de connexion"""
         if self.background_image:
             self.ecran.blit(self.background_image, (0, 0))
         else:

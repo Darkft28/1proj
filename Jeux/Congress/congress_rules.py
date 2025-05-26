@@ -76,7 +76,7 @@ class Plateau_pion:
     def get_couleur_case(self, ligne, col):
         """Récupère la couleur d'une case depuis le fichier JSON"""
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Vérifier si les indices sont dans les limites du plateau
@@ -166,7 +166,7 @@ class Plateau_pion:
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
