@@ -216,7 +216,7 @@ class Plateau_pion:
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
         
         # Vérifier si le clic est dans les limites du plateau
-        if 1 <= ligne < 9 and 1 <= col < 9:
+        if 0 <= ligne < 9 and 0 <= col < 9:
             if self.pion_selectionne is None:
                 # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
