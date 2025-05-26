@@ -159,17 +159,15 @@ class MenuPrincipal:
             y_instructions += int(40 * self.RATIO_Y)
     
     def lancer_host(self):
-        """Lance le jeu en mode Host"""
         pygame.quit()
         # Lancer le fichier host
-        subprocess.Popen([sys.executable, "reseau/plateau_pion_host.py"])
+        subprocess.Popen([sys.executable, "reseau/Isolation/plateau_pion_host.py"])
         sys.exit()
     
     def lancer_guest(self):
-        """Lance le jeu en mode Guest"""
         pygame.quit()
         # Lancer le fichier guest
-        subprocess.Popen([sys.executable, "reseau/plateau_pion_guest.py"])
+        subprocess.Popen([sys.executable, "reseau/Isolation/plateau_pion_guest.py"])
         sys.exit()
     
     def run(self):
