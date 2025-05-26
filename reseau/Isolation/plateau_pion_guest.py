@@ -103,7 +103,6 @@ class Plateau_pion_guest:
 
 
     def se_connecter(self, ip_host, code_salon):
-        """Se connecte au serveur host"""
         try:
             self.socket_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket_client.connect((ip_host, self.port))
@@ -134,7 +133,6 @@ class Plateau_pion_guest:
             return False
     
     def recevoir_messages(self):
-        """Reçoit les messages du serveur"""
         while self.connexion_etablie:
             try:
                 message = self.socket_client.recv(1024).decode()
@@ -148,7 +146,6 @@ class Plateau_pion_guest:
         self.connexion_etablie = False
     
     def traiter_message(self, message):
-        """Traite un message reçu"""
         if message.startswith("MOVE:"):
             # Format: MOVE:ligne,col
             coords = message.split(":")[1].split(",")
@@ -170,7 +167,6 @@ class Plateau_pion_guest:
             self.game_over = True
     
     def envoyer_message(self, message):
-        """Envoie un message au serveur"""
         if self.connexion_etablie and self.socket_client:
             try:
                 self.socket_client.send(message.encode())
@@ -178,7 +174,6 @@ class Plateau_pion_guest:
                 self.connexion_etablie = False
     
     def afficher_ecran_connexion(self):
-        """Affiche l'écran de connexion"""
         if self.background_image:
             self.ecran.blit(self.background_image, (0, 0))
         else:
