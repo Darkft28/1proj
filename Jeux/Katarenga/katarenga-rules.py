@@ -62,7 +62,7 @@ class Plateau_pion:
 
 
         #plateau de pions
-        self.plateau = [[0, 10, 10, 10, 10, 10, 10, 10, 10, 0],
+        self.plateau = [[3, 10, 10, 10, 10, 10, 10, 10, 10, 3],
                         [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
@@ -71,7 +71,7 @@ class Plateau_pion:
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 1, 1, 1, 1, 1, 1, 1, 1, 10],
-                        [0, 10, 10, 10, 10, 10, 10, 10, 10, 0]]
+                        [4, 10, 10, 10, 10, 10, 10, 10, 10, 4]]
         
         # Configuration des boutons
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
@@ -242,14 +242,22 @@ class Plateau_pion:
     def mouvement_valide(self, depart, arrivee):
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
-        
-        # Vérifier si la case d'arrivée est vide
-        if self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 1:
+        entree_base =  False
+        if self.plateau[ligne_arr][col_arr] == self.joueur_actuel:
+            #pion allié
             return False
-        elif self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 2:
+        elif self.plateau[ligne_arr][col_arr] == 10:
             return False
-        else:
-            self.plateau[ligne_arr][col_arr] = self.joueur_actuel
+        elif (self.joueur_actuel == 1 and ligne_dep == 1) or \
+                (self.joueur_actuel == 2 and ligne_dep == 8):
+            #pion sur la liigne ennemie
+            entree_base = True
+            print(f"Le joueur {self.joueur_actuel} a atteint l'entrée de base.")
+            
+            if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
+                (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+                return True
+            return False
         
         try:
             with open("plateaux/plateau_katarenga.json", 'r') as f:
@@ -262,16 +270,19 @@ class Plateau_pion:
             image_path = plateau_images[ligne_dep][col_dep]
             
             # Déterminer les mouvements valides selon la couleur
-            if "rouge" in image_path.lower():
-                return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            elif "bleu" in image_path.lower():
-                return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
-            elif "jaune" in image_path.lower():
-                return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
-            elif "vert" in image_path.lower():
-                return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
+            if entree_base == True:
+                self.plateau[ligne_arr][col_arr] = self.joueur_actuel
             else:
-                return True
+                if "rouge" in image_path.lower():
+                    return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
+                elif "bleu" in image_path.lower():
+                    return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
+                elif "jaune" in image_path.lower():
+                    return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
+                elif "vert" in image_path.lower():
+                    return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
+                else:
+                    return True
                 
         except Exception as e:
             print(f"Erreur lors de la vérification des règles de mouvement: {e}")
