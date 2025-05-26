@@ -23,19 +23,19 @@
         ],
         [
             "assets/image_rouge.png",
+            "assets/image_bleue.png",
             "assets/image_rouge.png",
-            "assets/image_verte.png",
-            "assets/image_verte.png",
+            "assets/image_rouge.png",
             null,
             null,
             null,
             null
         ],
         [
+            "assets/image_verte.png",
             "assets/image_jaune.png",
-            "assets/image_jaune.png",
-            "assets/image_jaune.png",
-            "assets/image_jaune.png",
+            "assets/image_rouge.png",
+            "assets/image_rouge.png",
             null,
             null,
             null,
@@ -74,22 +74,11 @@
             ],
             [
                 2,
-                1
-            ]
-        ],
-        "bleu": [],
-        "jaune": [
-            [
-                0,
-                1
+                2
             ],
             [
-                3,
-                0
-            ],
-            [
-                3,
-                1
+                2,
+                3
             ],
             [
                 3,
@@ -98,6 +87,22 @@
             [
                 3,
                 3
+            ]
+        ],
+        "bleu": [
+            [
+                2,
+                1
+            ]
+        ],
+        "jaune": [
+            [
+                0,
+                1
+            ],
+            [
+                3,
+                1
             ]
         ],
         "vert": [
@@ -106,12 +111,8 @@
                 0
             ],
             [
-                2,
-                2
-            ],
-            [
-                2,
-                3
+                3,
+                0
             ]
         ]
     }

@@ -45,6 +45,9 @@ class Play:
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
         pygame.display.set_caption("Choix du jeu")
         
+        # Variable pour stocker le jeu sélectionné
+        self.jeu_selectionne = None
+        
         # Créer les boutons
         self.boutons = self._creer_boutons()
         
@@ -125,36 +128,20 @@ class Play:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
 
-                    # Vérifier le clic sur le bouton retour
                     if self.bouton_retour["rect"].collidepoint(x, y):
                         en_cours = False
 
-                    # Vérifier les clics sur les boutons de jeux
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
-                            if nom == "Katarenga":
-                                print("jeu Katarenga")
-                                # TODO: 
-                            elif nom == "Isolation":
-                                print("jeu Isolation")
-                                # TODO: 
-                            elif nom == "Congress":
-                                try:
-                                    # Import and run board selector
-                                    sys.path.append(project_root)  # Ensure path is set
-                                    from Board.board_complet import SelecteurPlateau
-                                    selecteur = SelecteurPlateau()
-                                    plateau_final = selecteur.executer()
-                                    
-                                    if plateau_final:  # Si un plateau a été créé
-                                        from Jeux.Congress.congress_rules import Plateau_pion
-                                        jeu = Plateau_pion()
-                                        jeu.run()
-                                    pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
-                                except ImportError as e:
-                                    print(f"Error importing modules: {e}")
-                                    print(f"Project root: {project_root}")
-                                    print(f"Current Python path: {sys.path}")
+                            # Stocker le jeu sélectionné
+                            self.jeu_selectionne = nom
+                            print(f"Jeu sélectionné : {self.jeu_selectionne}")
+                            
+                            # Lancer le menu de sélection des modes
+                            menu_mode = MenuMode(self.jeu_selectionne)
+                            menu_mode.executer()
+                            en_cours = False
+
         
             self.dessiner()
             pygame.display.flip()
