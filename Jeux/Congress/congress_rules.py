@@ -22,7 +22,7 @@ class Plateau_pion:
         pygame.display.set_caption("Congress")
         
         # Taille des cases
-        self.TAILLE_CASE = int(100 * self.RATIO_X)
+        self.TAILLE_CASE = int(120 * self.RATIO_X)
         self.OFFSET_X = (self.LARGEUR - 8 * self.TAILLE_CASE) // 2
         self.OFFSET_Y = (self.HAUTEUR - 8 * self.TAILLE_CASE) // 2
         
@@ -76,7 +76,7 @@ class Plateau_pion:
     def get_couleur_case(self, ligne, col):
         """Récupère la couleur d'une case depuis le fichier JSON"""
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Vérifier si les indices sont dans les limites du plateau
@@ -114,8 +114,10 @@ class Plateau_pion:
 
     def run(self):
         # Redimensionner les pions
-        self.pion_blanc = pygame.transform.scale(self.pion_blanc, (self.TAILLE_CASE, self.TAILLE_CASE))
-        self.pion_noir = pygame.transform.scale(self.pion_noir, (self.TAILLE_CASE, self.TAILLE_CASE))
+        pion_size = int(self.TAILLE_CASE * 0.8)  # 0.6 = 60% de la case, ajuste si besoin
+        offset = (self.TAILLE_CASE - pion_size) // 2
+        self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
+        self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
         
         # Variables de jeu
         self.joueur_actuel = 1  # 1 pour blanc, 2 pour noir
@@ -144,38 +146,27 @@ class Plateau_pion:
         pygame.quit()
 
     def afficher_preview_mouvements(self):
-        """Affiche les cases où le pion sélectionné peut se déplacer"""
+        """Affiche des cercles noirs pour les mouvements possibles"""
         if self.pion_selectionne and self.mouvements_possibles:
-            # Créer une surface transparente pour les overlays
-            overlay = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
-            overlay.fill(self.VERT_PREVIEW)
-            
+            rayon = self.TAILLE_CASE // 4  # La moitié du rayon du pion
             for ligne, col in self.mouvements_possibles:
-                # Dessiner un overlay vert semi-transparent
-                self.ecran.blit(overlay, 
-                              (self.OFFSET_X + col * self.TAILLE_CASE, 
-                               self.OFFSET_Y + ligne * self.TAILLE_CASE))
-                
-                # Dessiner un contour vert pour plus de visibilité
-                pygame.draw.rect(self.ecran, self.VERT, 
-                               (self.OFFSET_X + col * self.TAILLE_CASE, 
-                                self.OFFSET_Y + ligne * self.TAILLE_CASE, 
-                                self.TAILLE_CASE, self.TAILLE_CASE), 3)
+                centre_x = self.OFFSET_X + col * self.TAILLE_CASE + self.TAILLE_CASE // 2
+                centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
+                pygame.draw.circle(self.ecran, self.NOIR, (centre_x, centre_y), rayon)
 
     def afficher_pion_selectionne(self):
-        """Surligne le pion actuellement sélectionné"""
+        """Affiche un cercle autour du pion sélectionné"""
         if self.pion_selectionne:
             ligne, col = self.pion_selectionne
-            # Dessiner un contour orange épais autour du pion sélectionné
-            pygame.draw.rect(self.ecran, self.ORANGE, 
-                           (self.OFFSET_X + col * self.TAILLE_CASE, 
-                            self.OFFSET_Y + ligne * self.TAILLE_CASE, 
-                            self.TAILLE_CASE, self.TAILLE_CASE), 5)
+            centre_x = self.OFFSET_X + col * self.TAILLE_CASE + self.TAILLE_CASE // 2
+            centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
+            rayon = int(self.TAILLE_CASE * 0.42)
+            pygame.draw.circle(self.ecran, self.VERT, (centre_x, centre_y), rayon, 5)
     
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_17.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
@@ -221,23 +212,26 @@ class Plateau_pion:
                                     self.TAILLE_CASE, self.TAILLE_CASE))
     
     def afficher_plateau(self):
+        pion_size = int(self.TAILLE_CASE * 0.8)
+        offset = (self.TAILLE_CASE - pion_size) // 2
         for i in range(8):
             for j in range(8):
                 if self.plateau[i][j] == 1:
                     self.ecran.blit(self.pion_blanc, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE))
+                        (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                        self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                 elif self.plateau[i][j] == 2:
                     self.ecran.blit(self.pion_noir, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE))
+                        (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                        self.OFFSET_Y + i * self.TAILLE_CASE + offset))
     
     def afficher_tour(self):
-        font = pygame.font.Font(None, 36)
-        texte = f"Tour du joueur {'Blanc' if self.joueur_actuel == 1 else 'Noir'}"
-        couleur = self.BLANC if self.joueur_actuel == 1 else self.NOIR
-        surface_texte = font.render(texte, True, couleur)
-        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 20))
+        police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
+        joueur_nom = "Joueur 1" if self.joueur_actuel == 1 else "Joueur 2"
+        texte = f"Tour du joueur {joueur_nom}"
+        couleur = self.NOIR if self.joueur_actuel == 2 else self.BLANC
+        surface_texte = police.render(texte, True, couleur)
+        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 70))
     
     def gerer_clic(self):
         pos = pygame.mouse.get_pos()
