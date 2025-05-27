@@ -292,74 +292,52 @@ class Plateau_pion_host:
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour.center)
         self.ecran.blit(texte_retour, rect_texte_retour)
 
-    def analyser_couleur_image(self, image_path):
-        try:
-            image = pygame.image.load(image_path)
-            pixel_array = pygame.surfarray.array3d(image)
-            
-            moyenne_r = pixel_array[:,:,0].mean()
-            moyenne_g = pixel_array[:,:,1].mean()
-            moyenne_b = pixel_array[:,:,2].mean()
-            
-            if moyenne_r > 150 and moyenne_g < 100 and moyenne_b < 100:
-                return self.ROUGE
-            elif moyenne_r < 100 and moyenne_g < 100 and moyenne_b > 150:
-                return self.BLEU
-            elif moyenne_r < 100 and moyenne_g > 150 and moyenne_b < 100:
-                return self.VERT
-            elif moyenne_r > 200 and moyenne_g > 200 and moyenne_b < 150:
-                return self.JAUNE
-            else:
-                return self.ROUGE
-                
-        except Exception as e:
-            print(f"Erreur lors de l'analyse de couleur de {image_path}: {e}")
-            return self.ROUGE
 
     def get_cases_bloquees_par_pion(self, ligne, col, couleur_case):
         cases_bloquees = []
-        
-        if couleur_case == self.BLEU:
+
+        if couleur_case == "bleu":
             directions = [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]
             for dl, dc in directions:
                 nl, nc = ligne + dl, col + dc
                 if 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
-                    
-        elif couleur_case == self.VERT:
+
+        elif couleur_case == "vert":
             mouvements_cavalier = [(-2,-1), (-2,1), (-1,-2), (-1,2), (1,-2), (1,2), (2,-1), (2,1)]
             for dl, dc in mouvements_cavalier:
                 nl, nc = ligne + dl, col + dc
                 if 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
-                    
-        elif couleur_case == self.JAUNE:
+
+        elif couleur_case == "jaune":
             directions = [(-1,-1), (-1,1), (1,-1), (1,1)]
             for dl, dc in directions:
                 nl, nc = ligne + dl, col + dc
                 while 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
-                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.JAUNE:
+                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == "jaune":
                         break
                     nl, nc = nl + dl, nc + dc
-                    
-        elif couleur_case == self.ROUGE:
+
+        elif couleur_case == "rouge":
             directions = [(-1,0), (1,0), (0,-1), (0,1)]
             for dl, dc in directions:
                 nl, nc = ligne + dl, col + dc
                 while 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
-                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
+                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == "rouge":
                         break
                     nl, nc = nl + dl, nc + dc
-                    
+                
         return cases_bloquees
 
     def get_couleur_case(self, ligne, col):
         try:
             with open("plateaux/plateau_18.json", 'r') as f:
                 plateau_images = json.load(f)
-            
+
+            # Adapter le plateau si nécessaire
             if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
                 plateau_complet = []
                 for i in range(8):
@@ -368,30 +346,31 @@ class Plateau_pion_host:
                         ligne_data.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
                     plateau_complet.append(ligne_data)
                 plateau_images = plateau_complet
-            
+
             image_path = plateau_images[ligne][col]
-            
-            if "rouge" in image_path.lower() or "red" in image_path.lower():
-                return self.ROUGE
-            elif "bleu" in image_path.lower() or "blue" in image_path.lower():
-                return self.BLEU
-            elif "vert" in image_path.lower() or "green" in image_path.lower():
-                return self.VERT
-            elif "jaune" in image_path.lower() or "yellow" in image_path.lower():
-                return self.JAUNE
+
+            # Déterminer la couleur selon le nom de fichier
+            if "rouge" in image_path.lower():
+                return "rouge"
+            elif "bleu" in image_path.lower():
+                return "bleu"
+            elif "jaune" in image_path.lower():
+                return "jaune"
+            elif "vert" in image_path.lower():
+                return "vert"
             else:
-                return self.analyser_couleur_image(image_path)
-                
+                return None
+
         except Exception as e:
             print(f"Erreur lors de la détection de couleur: {e}")
             if (ligne + col) % 4 == 0:
-                return self.ROUGE
+                return "rouge"
             elif (ligne + col) % 4 == 1:
-                return self.BLEU
+                return "bleu"
             elif (ligne + col) % 4 == 2:
-                return self.VERT
+                return "vert"
             else:
-                return self.JAUNE
+                return "jaune"
 
     def peut_placer_pion(self, ligne, col):
         return (0 <= ligne < 8 and 0 <= col < 8 and 

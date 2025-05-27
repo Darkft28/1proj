@@ -183,21 +183,23 @@ class Congress_host:
             col_dep = int(coords[1])
             ligne_arr = int(coords[2])
             col_arr = int(coords[3])
-            
-            # Jouer le coup
+
+            # Jouer le coup de l'adversaire
             self.deplacer_pion((ligne_dep, col_dep), (ligne_arr, col_arr))
-            self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
-            
-            # Vérifier la victoire
-            if self.verifier_victoire(1):
+
+            # Vérifier si l'adversaire a gagné
+            joueur_adversaire = 1 if self.mon_numero == 2 else 2
+            if self.verifier_victoire(joueur_adversaire):
                 self.game_over = True
-                self.gagnant = 1
-                self.envoyer_message("VICTOIRE:1")
-            elif self.verifier_victoire(2):
-                self.game_over = True
-                self.gagnant = 2
-                self.envoyer_message("VICTOIRE:2")
-        
+                self.gagnant = joueur_adversaire
+            else:
+                # Changer de joueur seulement si pas de victoire
+                self.joueur_actuel = self.mon_numero
+
+        elif message.startswith("VICTOIRE:"):
+            self.game_over = True
+            self.gagnant = int(message.split(":")[1])
+
         elif message == "ABANDON":
             self.game_over = True
             self.gagnant = "abandon_adversaire"
@@ -453,23 +455,37 @@ class Congress_host:
             for j in range(8):
                 if self.plateau[i][j] == joueur:
                     positions.append((i, j))
-        
-        if not positions:
+
+        # S'il n'y a pas de pions, ce n'est pas une victoire
+        if len(positions) == 0:
             return False
-        
-        # Vérifier si tous les pions sont connectés
+
+        # S'il n'y a qu'un pion, c'est une victoire
+        if len(positions) == 1:
+            return True
+
+        # Vérifier si tous les pions sont connectés (adjacents)
         visites = set()
-        pile = [positions[0]]
-        
+        pile = [positions[0]]  # Commencer par le premier pion trouvé
+
         while pile:
-            pos = pile.pop()
-            visites.add(pos)
-            
-            i, j = pos
-            for ni, nj in [(i+1, j), (i-1, j), (i, j+1), (i, j-1)]:
-                if 0 <= ni < 8 and 0 <= nj < 8 and self.plateau[ni][nj] == joueur and (ni, nj) not in visites:
+            pos_actuelle = pile.pop()
+            if pos_actuelle in visites:
+                continue
+
+            visites.add(pos_actuelle)
+            i, j = pos_actuelle
+
+            # Vérifier les 4 directions (haut, bas, gauche, droite)
+            for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                ni, nj = i + di, j + dj
+                # Vérifier si la position est valide et contient un pion du même joueur
+                if (0 <= ni < 8 and 0 <= nj < 8 and 
+                    self.plateau[ni][nj] == joueur and 
+                    (ni, nj) not in visites):
                     pile.append((ni, nj))
-        
+
+        # Victoire si tous les pions sont connectés
         return len(visites) == len(positions)
 
     def run(self):
@@ -738,12 +754,12 @@ class Congress_host:
     def gerer_clic(self):
         if self.joueur_actuel != self.mon_numero:
             return
-            
+
         pos = pygame.mouse.get_pos()
-        
+
         col = (pos[0] - self.OFFSET_X) // self.TAILLE_CASE
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
-        
+
         if 0 <= ligne < 8 and 0 <= col < 8:
             if self.pion_selectionne is None:
                 # Sélection d'un pion
@@ -755,24 +771,32 @@ class Congress_host:
                 # Déplacement d'un pion
                 if self.mouvement_valide(self.pion_selectionne, (ligne, col)):
                     ligne_dep, col_dep = self.pion_selectionne
-                    
-                    # Envoyer le mouvement au client
-                    self.envoyer_message(f"MOVE:{ligne_dep},{col_dep},{ligne},{col}")
-                    
+
+                    # Effectuer le déplacement
                     self.deplacer_pion(self.pion_selectionne, (ligne, col))
+
+                    # Envoyer le mouvement à l'adversaire
+                    if hasattr(self, 'client_socket'):  # Pour le host
+                        self.envoyer_message(f"MOVE:{ligne_dep},{col_dep},{ligne},{col}")
+                    else:  # Pour le guest
+                        self.envoyer_message(f"MOVE:{ligne_dep},{col_dep},{ligne},{col}")
+
+                    # Réinitialiser la sélection
                     self.pion_selectionne = None
                     self.mouvements_possibles = []
-                    self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
-                    
-                    # Vérifier la victoire
-                    if self.verifier_victoire(1):
+
+                    # Vérifier la victoire AVANT de changer de joueur
+                    if self.verifier_victoire(self.mon_numero):
                         self.game_over = True
-                        self.gagnant = 1
-                        self.envoyer_message("VICTOIRE:1")
-                    elif self.verifier_victoire(2):
-                        self.game_over = True
-                        self.gagnant = 2
-                        self.envoyer_message("VICTOIRE:2")
+                        self.gagnant = self.mon_numero
+                        if hasattr(self, 'client_socket'):  # Pour le host
+                            self.envoyer_message(f"VICTOIRE:{self.mon_numero}")
+                        else:  # Pour le guest
+                            self.envoyer_message(f"VICTOIRE:{self.mon_numero}")
+                    else:
+                        # Changer de joueur seulement si pas de victoire
+                        self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
+
                 else:
                     # Si on clique sur un autre pion du même joueur
                     if self.plateau[ligne][col] == self.joueur_actuel:

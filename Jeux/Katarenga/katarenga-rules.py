@@ -242,22 +242,27 @@ class Plateau_pion:
     def mouvement_valide(self, depart, arrivee):
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
-        entree_base =  False
+        
+        # Vérifier que la destination n'est pas occupée par un pion allié
         if self.plateau[ligne_arr][col_arr] == self.joueur_actuel:
-            #pion allié
             return False
-        elif self.plateau[ligne_arr][col_arr] == 10:
+        
+        # Vérifier que la destination n'est pas une bordure
+        if self.plateau[ligne_arr][col_arr] == 10:
             return False
-        elif (self.joueur_actuel == 1 and ligne_dep == 1) or \
-                (self.joueur_actuel == 2 and ligne_dep == 8):
-            #pion sur la liigne ennemie
-            entree_base = True
-            print(f"Le joueur {self.joueur_actuel} a atteint l'entrée de base.")
+        
+        # Cas spécial : pion sur la ligne adverse (ligne d'entrée de base)
+        pion_sur_ligne_adverse = False
+        if (self.joueur_actuel == 1 and ligne_dep == 1) or \
+        (self.joueur_actuel == 2 and ligne_dep == 8):
+            pion_sur_ligne_adverse = True
             
+            # Si le pion est sur la ligne adverse, il peut aller dans un camp adverse
+            # sans contraintes de mouvement (déplacement libre)
             if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
-                (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+            (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+                print(f"Le joueur {self.joueur_actuel} entre dans un camp adverse!")
                 return True
-            return False
         
         try:
             with open("plateaux/plateau_katarenga.json", 'r') as f:
@@ -269,20 +274,22 @@ class Plateau_pion:
                 
             image_path = plateau_images[ligne_dep][col_dep]
             
-            # Déterminer les mouvements valides selon la couleur
-            if entree_base == True:
-                self.plateau[ligne_arr][col_arr] = self.joueur_actuel
+            if "rouge" in image_path.lower():
+                # Mouvement en ligne droite (horizontal ou vertical)
+                return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
+            elif "bleu" in image_path.lower():
+                # Mouvement de roi (une case dans toutes les directions)
+                return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
+            elif "jaune" in image_path.lower():
+                # Mouvement en diagonale
+                return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
+            elif "vert" in image_path.lower():
+                # Mouvement de cavalier
+                return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or \
+                    (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
             else:
-                if "rouge" in image_path.lower():
-                    return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
-                elif "bleu" in image_path.lower():
-                    return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
-                elif "jaune" in image_path.lower():
-                    return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
-                elif "vert" in image_path.lower():
-                    return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
-                else:
-                    return True
+                # Mouvement libre pour les autres cases
+                return True
                 
         except Exception as e:
             print(f"Erreur lors de la vérification des règles de mouvement: {e}")
@@ -292,10 +299,27 @@ class Plateau_pion:
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
         
+        # Vérifier si le pion va dans un camp adverse
+        pion_entre_dans_camp = False
+        if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
+        (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+            pion_entre_dans_camp = True
+            print(f"Le pion du joueur {self.joueur_actuel} entre définitivement dans le camp adverse!")
+        
+        # Capturer le pion
+        if self.plateau[ligne_arr][col_arr] in [1, 2] and not pion_entre_dans_camp:
+            pion_capture = self.plateau[ligne_arr][col_arr]
+            print(f"Pion {pion_capture} capturé!")
+        
         # Déplacer le pion
-        self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
-        self.plateau[ligne_dep][col_dep] = 0
-    
+        if pion_entre_dans_camp:
+            self.plateau[ligne_dep][col_dep] = 0
+            print(f"Le pion est maintenant dans le camp et ne peut plus revenir en jeu.")
+        else:
+            # Déplacement normal
+            self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
+            self.plateau[ligne_dep][col_dep] = 0
+
     def verifier_victoire(self, joueur):
         # Trouver tous les pions du joueur
         positions = []
