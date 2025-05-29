@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+from config import get_theme
 
 # Add the project root directory to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -22,7 +23,12 @@ class MenuMode:
         pygame.display.set_caption(f"Choix du mode - {self.jeu}")
 
         self.font_path = 'assets/police-gloomie_saturday/Gloomie Saturday.otf'
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-jouer.png")
+        
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
         self.BLANC = (255, 255, 255)

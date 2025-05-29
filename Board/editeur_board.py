@@ -2,6 +2,7 @@ import pygame
 import sys
 import json
 import os
+from menu.config import get_theme
 
 class EditeurPlateau4x4:
     def __init__(self):
@@ -16,7 +17,11 @@ class EditeurPlateau4x4:
         self.HAUTEUR = info.current_h
         
         # Fond d'écran
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-editeur.png")
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440

@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+from config import get_theme
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
@@ -18,7 +19,11 @@ class Menu:
         self.HAUTEUR = info.current_h
         
         # Fond d'écran
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440
@@ -130,15 +135,24 @@ class Menu:
                                 from menu.settings import Settings
                                 settings = Settings(self.LARGEUR, self.HAUTEUR)
                                 settings.executer()
+                                self.recharger_theme()  # <-- Ajoute ceci
                                 self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
                                 pygame.display.set_caption("Menu Principal")
-                                self.boutons = self._creer_boutons()  # Pour bien recentrer les boutons si besoin
+                                self.boutons = self._creer_boutons()
             
             self.dessiner()
             pygame.display.flip()
         
         pygame.quit()
         sys.exit()
+
+    def recharger_theme(self):
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
 if __name__ == "__main__":
     menu = Menu()

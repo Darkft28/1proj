@@ -1,4 +1,5 @@
 import pygame
+from config import get_theme, set_theme
 
 class Settings:
     def __init__(self, largeur=None, hauteur=None):
@@ -15,7 +16,11 @@ class Settings:
         self.RATIO_Y = self.HAUTEUR / 1440
         
         # Charger l'image d'arrière-plan
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-settings.png") 
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Couleurs
@@ -39,18 +44,17 @@ class Settings:
         
         self.options_theme = ["Clair", "Sombre"]
         self.options_langue = ["Francais", "English"]
-        
+
         # Options sélectionnées
         self.selected_resolution = 1  # Index par défaut 
         self.selected_theme = 0       # Index par défaut 
         self.selected_langue = 0      # Index par défaut 
-        
+
         # État des menus déroulants (ouvert/fermé)
         self.dropdown_resolution_ouvert = False
         self.dropdown_theme_ouvert = False
         self.dropdown_langue_ouvert = False
-        
-        
+
         # Créer les dropdowns
         self.dropdowns = self._creer_dropdowns()
         
@@ -176,14 +180,14 @@ class Settings:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     en_cours = False
-                
+
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
-                    
+
                     # Vérifier le clic sur le bouton retour
                     if self.bouton_retour["rect"].collidepoint(x, y):
                         en_cours = False
-                    
+
                     # Vérifier les clics sur les menus déroulants
                     dropdown_clique = False
                     for nom, info in self.dropdowns.items():
@@ -194,10 +198,10 @@ class Settings:
                             for autre_nom in self.dropdowns:
                                 if autre_nom != nom:
                                     self.dropdowns[autre_nom]["ouvert"] = False
-                            
+
                             # Inverser l'état du menu actuel
                             info["ouvert"] = not info["ouvert"]
-                            
+
                             # Recréer les rectangles pour les options si le menu est ouvert
                             if info["ouvert"]:
                                 info["options_rects"] = []
@@ -210,7 +214,7 @@ class Settings:
                                         self.HAUTEUR_DROPDOWN
                                     )
                                     info["options_rects"].append(option_rect)
-                        
+
                         # Si le menu est ouvert, vérifier les clics sur les options
                         elif info["ouvert"]:
                             for i, option_rect in enumerate(info["options_rects"]):
@@ -218,18 +222,28 @@ class Settings:
                                     dropdown_clique = True
                                     info["selected"] = i
                                     info["ouvert"] = False
-                                    
-                                    # TODO: Appliquer le changement de thème ou de langue si besoin
-                                    
+
+                                    # Appliquer le changement de thème immédiatement
+                                    if nom == "theme":
+                                        set_theme(info["options"][i])
+                                        # Recharge le fond d'écran selon le nouveau thème
+                                        theme = info["options"][i]
+                                        if theme == "Sombre":
+                                            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+                                        else:
+                                            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
+                                        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
+
                     # Si on a cliqué en dehors des menus déroulants, tous les fermer
                     if not dropdown_clique:
                         for nom in self.dropdowns:
                             self.dropdowns[nom]["ouvert"] = False
-            
+
             self.dessiner()
             pygame.display.flip()
 
+if __name__ == "__main__":
+    start = Settings()
+    start.executer()
 
 
-
-    

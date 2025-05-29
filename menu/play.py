@@ -1,6 +1,7 @@
 import pygame
 import sys
 import os
+from config import get_theme
 
 # Add the project root directory to the Python path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +22,11 @@ class Play:
         self.HAUTEUR = info.current_h
         
         # Fond d'écran
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-jouer.png")
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Calcul des ratios d'échelle basé sur 2560x1440
