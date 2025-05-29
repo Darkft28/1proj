@@ -222,7 +222,6 @@ class Plateau_pion:
         # Choisir une case aléatoire
         ligne, col = random.choice(cases_legales)
         
-        print(f"L'IA joue en ({ligne}, {col})")
         return self.placer_pion(ligne, col, self.joueur_ia)
 
     def verifier_fin_de_jeu(self):
@@ -271,11 +270,9 @@ class Plateau_pion:
                         # Vérifier si le jeu est terminé après le coup de l'IA
                         if self.verifier_fin_de_jeu():
                             self.game_over = True
-                            print("Jeu terminé!")
                     else:
                         # L'IA ne peut pas jouer, fin de partie
                         self.game_over = True
-                        print("L'IA ne peut plus jouer, jeu terminé!")
             else:
                 self.afficher_fin_de_jeu()
             
@@ -298,7 +295,7 @@ class Plateau_pion:
             
             pygame.display.flip()
         
-        pygame.quit()
+        return
 
     def afficher_cases_legales(self):
         """Affiche un contour vert sur les cases où le joueur humain peut jouer"""
@@ -355,7 +352,6 @@ class Plateau_pion:
                                   (self.OFFSET_X + j * self.TAILLE_CASE, 
                                    self.OFFSET_Y + i * self.TAILLE_CASE))
         except Exception as e:
-            print(f"Erreur lors du chargement du plateau: {e}")
             # Fallback: dessiner avec les couleurs calculées
             for i in range(8):
                 for j in range(8):
@@ -375,11 +371,12 @@ class Plateau_pion:
         for i in range(8):
             for j in range(8):
                 if self.cases_bloquees[i][j]:
-                    # Case entièrement noire
-                    pygame.draw.rect(self.ecran, self.NOIR, 
-                                   (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE, 
-                                    self.TAILLE_CASE, self.TAILLE_CASE))
+                    surf = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
+                    surf.fill((100, 100, 100, 235))  # Gris avec alpha (120/255)
+                    self.ecran.blit(
+                        surf,
+                        (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE)
+                    )
 
     def afficher_pions(self):
         pion_size = int(self.TAILLE_CASE * 0.8)  
@@ -502,11 +499,9 @@ class Plateau_pion:
         
         # Vérifier si le clic est dans les limites du plateau
         if 0 <= ligne < 8 and 0 <= col < 8:
-            print(f"Clic sur la case ({ligne}, {col})")
             
             # Vérifier si la case est légale
             if not self.peut_placer_pion(ligne, col):
-                print("Case non autorisée ! Vous ne pouvez jouer que sur les cases avec un contour vert.")
                 return
             
             # Tenter de placer un pion
@@ -516,13 +511,12 @@ class Plateau_pion:
                 
                 # Vérifier si le jeu est terminé après le coup du joueur
                 if self.verifier_fin_de_jeu():
-                    self.game_over = True
-                    print("Jeu terminé!")                    
-            else:
-                print("Impossible de placer un pion ici!")
+                    self.game_over = True                
+
 
 # Lancement du jeu
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
 
+print

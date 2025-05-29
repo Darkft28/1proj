@@ -104,7 +104,6 @@ class MenuMode:
             pygame.display.flip()
 
     def lancer_jeu(self, mode):
-        print(f"Lancement du jeu {self.jeu} en mode {mode}")
         
         if self.jeu == "Congress":
             try:
@@ -132,8 +131,8 @@ class MenuMode:
         elif self.jeu == "Katarenga":
             try:
                 # Lancer Katarenga avec le mode sélectionné
-                print(f"Lancement de Katarenga en mode {mode}")
-                # TODO: Intégrer le code pour lancer Katarenga
+                print(f"a supprimer une fois Katarenga fait")
+                #TODO: # Importer le module Katarenga et lancer le jeu
                 # from Jeux.Katarenga.katarenga_main import Katarenga
                 # jeu = Katarenga(mode)
                 # jeu.run()
@@ -159,12 +158,12 @@ class MenuMode:
                             jeu = Plateau_pion()
                         jeu.run()
             except ImportError as e:
-                print("Erreur lors de l'import du jeu Isolation:", e)
-            except Exception as e:
-                print(f"Erreur lors du lancement de Isolation: {e}")
+                print("Erreur lors de l'import d'u jeu Isolation':", e)
 
 
 if __name__ == "__main__":
     # Test avec Congress par défaut
     menu = MenuMode("Congress")
     menu.executer()
+    
+print

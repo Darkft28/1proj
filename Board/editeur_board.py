@@ -562,7 +562,6 @@ class EditeurPlateau4x4:
             
             # Sauvegarder le nom du fichier chargé
             self.fichier_charge = nom_fichier
-            print("Plateau chargé avec succès!")
             
         except Exception as e:
             print(f"Erreur lors du chargement: {e}")
@@ -575,7 +574,6 @@ class EditeurPlateau4x4:
             chemin_fichier = os.path.join("plateaux", nom_fichier)
             if os.path.exists(chemin_fichier):
                 os.remove(chemin_fichier)
-                print(f"Plateau {nom_fichier} supprimé avec succès!")
                 self.charger_liste_plateaux()
                 # Ajuster la page courante si nécessaire
                 max_pages = (len(self.plateaux_sauvegardes) + 7) // 8
@@ -594,7 +592,6 @@ class EditeurPlateau4x4:
                         chemin_fichier = os.path.join("plateaux", nom_fichier)
                         if os.path.exists(chemin_fichier):
                             os.remove(chemin_fichier)
-                            print(f"Plateau {nom_fichier} supprimé avec succès!")
                     except Exception as e:
                         print(f"Erreur lors de la suppression du plateau {nom_fichier}: {e}")
           # Rafraîchir la liste et réinitialiser la sélection

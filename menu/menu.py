@@ -124,14 +124,12 @@ class Menu:
                                 self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
                                 pygame.display.set_caption("Menu Principal")
                             elif nom == "jouer":
-                                print("Lancer le jeu")
                                 from menu.play import Play
                                 start = Play()
                                 start.executer()
                                 self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
                                 pygame.display.set_caption("Choix du mode de jeu")
                             elif nom == "parametres":
-                                print("Ouvrir les paramètres")
                                 from menu.settings import Settings
                                 settings = Settings(self.LARGEUR, self.HAUTEUR)
                                 settings.executer()
@@ -157,3 +155,4 @@ class Menu:
 if __name__ == "__main__":
     menu = Menu()
     menu.executer()
+    

@@ -173,7 +173,7 @@ class Plateau_pion:
             
             pygame.display.flip()
         
-        pygame.quit()
+        return
 
     def afficher_preview_mouvements(self):
         """Affiche des cercles noirs pour les mouvements possibles"""
@@ -338,11 +338,9 @@ class Plateau_pion:
                     self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
                     # Vérifier victoire
                     if self.verifier_victoire(1):
-                        print("Le joueur 1 a gagné!")
                         self.game_over = True
                         self.gagnant = "Joueur 1"
                     elif self.verifier_victoire(2):
-                        print("Le joueur 2 a gagné!")
                         self.game_over = True
                         self.gagnant = "Joueur 2"
                 else:
@@ -507,3 +505,5 @@ class Plateau_pion:
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
+    
+print

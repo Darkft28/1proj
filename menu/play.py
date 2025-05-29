@@ -140,12 +140,14 @@ class Play:
                         if info["rect"].collidepoint(x, y):
                             # Stocker le jeu sélectionné
                             self.jeu_selectionne = nom
-                            print(f"Jeu sélectionné : {self.jeu_selectionne}")
                             
                             # Lancer le menu de sélection des modes
                             menu_mode = MenuMode(self.jeu_selectionne)
                             menu_mode.executer()
-                            en_cours = False
+                            # Quand le jeu se termine, on relance le menu Play
+                            self.jeu_selectionne = None
+                            self.executer()
+                            return
 
         
             self.dessiner()

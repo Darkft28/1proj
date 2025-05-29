@@ -532,7 +532,6 @@ class SelecteurPlateau:
                     try:
                         with open(os.path.join("plateaux", "plateau_finale.json"), 'w') as f:
                             json.dump(plateau_final, f, indent=4)
-                        print("Plateau sauvegardé dans 'plateaux/plateau_finale.json'")
                     except Exception as e:
                         print(f"Erreur lors de la sauvegarde du plateau: {e}")
                     

@@ -181,7 +181,7 @@ class Plateau_pion:
                         elif self.bouton_quitter and self.bouton_quitter.collidepoint(x, y):
                             self.running = False
             pygame.display.flip()
-        pygame.quit()
+        return           # <-- AJOUTE cette ligne
 
     def afficher_preview_mouvements(self):
         """Affiche des cercles noirs pour les mouvements possibles"""
@@ -425,7 +425,6 @@ class Plateau_pion:
                 self.deplacer_pion(depart, arrivee)
                 # Vérifier victoire
                 if self.verifier_victoire(self.joueur_ia):
-                    print("Le joueur Noir (IA) a gagné!")
                     self.game_over = True
                     self.gagnant = "Joueur 2"
                 self.joueur_actuel = self.joueur_humain
@@ -450,7 +449,6 @@ class Plateau_pion:
                     self.temps_derniere_action = pygame.time.get_ticks()
                     # Vérifier victoire
                     if self.verifier_victoire(self.joueur_humain):
-                        print("Le joueur Blanc a gagné!")
                         self.game_over = True
                         self.gagnant = "Joueur 1"
                 else:

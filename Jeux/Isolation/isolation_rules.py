@@ -278,7 +278,7 @@ class Plateau_pion:
                         self.running = False
             pygame.display.flip()
         
-        pygame.quit()
+        return
 
     def reinitialiser_jeu(self):
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
@@ -345,7 +345,7 @@ class Plateau_pion:
                 if self.cases_bloquees[i][j]:
                     # Crée une surface semi-transparente grise
                     surf = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
-                    surf.fill((100, 100, 100, 200))  # Gris avec alpha (120/255)
+                    surf.fill((100, 100, 100, 235))  # Gris avec alpha (120/255)
                     self.ecran.blit(
                         surf,
                         (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE)
@@ -461,19 +461,16 @@ class Plateau_pion:
         
         # Vérifier si le clic est dans les limites du plateau
         if 0 <= ligne < 8 and 0 <= col < 8:
-            print(f"Clic sur la case ({ligne}, {col})")
             
             # Tenter de placer un pion
             if self.placer_pion(ligne, col, self.joueur_actuel):
                 self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1                
                 # Vérifier si le jeu est terminé
                 if self.verifier_fin_de_jeu():
-                    self.game_over = True
-                    print("Jeu terminé!")                    
-            else:
-                print("Impossible de placer un pion ici!")
+                    self.game_over = True               
 
 # Lancement du jeu
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
+    
