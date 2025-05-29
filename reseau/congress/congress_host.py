@@ -336,7 +336,7 @@ class Congress_host:
 
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateaux/plateau_19.json", 'r') as f:
+            with open("plateaux/plateau_3.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Adapter le plateau si nécessaire
@@ -536,7 +536,7 @@ class Congress_host:
                                 self.server_socket.close()
                             pygame.quit()
                             import subprocess
-                            subprocess.Popen([sys.executable, "menu_principal.py"])
+                            subprocess.Popen([sys.executable, "menu/menu.py"])
                             sys.exit()
                         elif hasattr(self, 'bouton_copier_code') and self.bouton_copier_code.collidepoint(x, y):
                             if self.pyperclip:
@@ -594,46 +594,14 @@ class Congress_host:
         pygame.quit()
 
     def dessiner_plateau(self):
-        try:
-            with open("plateaux/plateau_19.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
-                plateau_complet = []
-                for i in range(8):
-                    ligne = []
-                    for j in range(8):
-                        ligne.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
-                    plateau_complet.append(ligne)
-                plateau_images = plateau_complet
-            
-            for i in range(8):
-                for j in range(8):
-                    image_path = plateau_images[i][j]
-                    
-                    if image_path not in self.images:
-                        try:
-                            self.images[image_path] = pygame.image.load(image_path).convert_alpha()
-                            self.images[image_path] = pygame.transform.scale(self.images[image_path], 
-                                                                           (self.TAILLE_CASE, self.TAILLE_CASE))
-                        except:
-                            couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
-                            surface = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE))
-                            surface.fill(couleur)
-                            self.images[image_path] = surface
-                    
-                    self.ecran.blit(self.images[image_path], 
-                                  (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                   self.OFFSET_Y + i * self.TAILLE_CASE))
-        except Exception as e:
-            print(f"Erreur lors du chargement du plateau: {e}")
-            for i in range(8):
-                for j in range(8):
-                    couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
-                    pygame.draw.rect(self.ecran, couleur, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                     self.OFFSET_Y + i * self.TAILLE_CASE, 
-                                     self.TAILLE_CASE, self.TAILLE_CASE))
+        for i in range(8):
+            for j in range(8):
+                couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                pygame.draw.rect(self.ecran, couleur, 
+                    (self.OFFSET_X + j * self.TAILLE_CASE, 
+                     self.OFFSET_Y + i * self.TAILLE_CASE, 
+                     self.TAILLE_CASE, self.TAILLE_CASE))
+                # Si tu veux afficher les images selon le plateau personnalisé, adapte ici
 
     def afficher_preview_mouvements(self):
         if self.pion_selectionne and self.mouvements_possibles:
@@ -834,3 +802,4 @@ class Congress_host:
 if __name__ == "__main__":
     jeu = Congress_host()
     jeu.run()
+

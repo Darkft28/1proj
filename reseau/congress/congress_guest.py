@@ -489,7 +489,7 @@ class Congress_guest:
                                 self.socket_client.close()
                             pygame.quit()
                             import subprocess
-                            subprocess.Popen([sys.executable, "menu_principal.py"])
+                            subprocess.Popen([sys.executable, "menu/menu.py"])
                             sys.exit()
                         elif self.bouton_connexion.collidepoint(x, y) and self.ip_input and self.code_input:
                             # Tenter la connexion
@@ -593,7 +593,7 @@ class Congress_guest:
 
     def dessiner_plateau(self):
         try:
-            with open("plateaux/plateau_19.json", 'r') as f:
+            with open("plateaux/plateau_3.json", 'r') as f:
                 plateau_images = json.load(f)
             
             if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
