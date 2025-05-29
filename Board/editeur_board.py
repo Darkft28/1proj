@@ -2,6 +2,10 @@ import pygame
 import sys
 import json
 import os
+import pygame
+import sys
+import json
+import os
 from menu.config import get_theme
 
 class EditeurPlateau4x4:
@@ -91,6 +95,9 @@ class EditeurPlateau4x4:
         self.plateau_modifie = False  # Pour suivre si des modifications ont été faites
         self.message_erreur = None  # Pour garder le message d'erreur affiché
         self.derniere_sauvegarde = None  # Pour comparer avec l'état actuel
+        self.message_erreur_actif = False  # Pour gérer l'affichage persistant du message d'erreur
+        self.message_succes = None  # Pour afficher le message de succès
+        self.message_succes_actif = False  # Pour gérer l'affichage persistant du message de succès
         
         # Boutons
         self.boutons = self._creer_boutons()
@@ -147,11 +154,13 @@ class EditeurPlateau4x4:
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
             
-        # Charger tous les fichiers JSON
+        # Charger tous les fichiers JSON et les trier pour maintenir un ordre stable
         self.plateaux_sauvegardes = [f for f in os.listdir("plateaux") if f.endswith('.json')]
+        # Trier par nom pour maintenir un ordre cohérent
+        self.plateaux_sauvegardes.sort()
         
         # Calculer le nombre total de pages
-        self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
+        self.nombre_pages = max(1, (len(self.plateaux_sauvegardes) + 7) // 8)
 
     def dessiner_ecran_selection(self):
         self.ecran.blit(self.background_image, (0, 0))
@@ -217,15 +226,10 @@ class EditeurPlateau4x4:
             colonne = i % 4
             x = self.debut_x + colonne * (taille_miniature + espace)
             y = self.debut_y + ligne * (taille_miniature + espace)
-            
             rect = pygame.Rect(x, y, taille_miniature, taille_miniature)
             self.boutons_plateaux.append(rect)
             
             index = debut_index + i
-            
-            # Afficher un cadre de sélection si le plateau est sélectionné pour suppression
-            if self.mode_suppression and index in self.plateaux_selectionnes:
-                pygame.draw.rect(self.ecran, self.ROUGE, rect, 4)
             
             # Afficher la prévisualisation du plateau
             try:
@@ -261,6 +265,10 @@ class EditeurPlateau4x4:
                             
             except Exception as e:
                 print(f"Erreur lors du chargement de la miniature {index}: {e}")
+            
+            # Afficher un cadre de sélection rouge APRÈS le contenu si le plateau est sélectionné pour suppression
+            if self.mode_suppression and index in self.plateaux_selectionnes:
+                pygame.draw.rect(self.ecran, self.ROUGE, rect, 6)  # Bordure plus épaisse pour plus de visibilité
 
         # Boutons de navigation (si plusieurs pages)
         if self.nombre_pages > 1:
@@ -401,15 +409,28 @@ class EditeurPlateau4x4:
                 if "texte" in info_bouton:
                     texte = police_bouton.render(info_bouton["texte"], True, self.BLANC)
                     rect_texte = texte.get_rect(center=rect.center)
-                    self.ecran.blit(texte, rect_texte)
-
-        # Bouton retour (identique à settings.py)
+                    self.ecran.blit(texte, rect_texte)        # Bouton retour (identique à settings.py)
         pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
-        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)        
         police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
         texte_retour = police_retour.render(self.bouton_retour["texte"], True, self.BLANC)
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
-        self.ecran.blit(texte_retour, rect_texte_retour)        # Rien ici - suppression de l'affichage des couleurs en haut à droite
+        self.ecran.blit(texte_retour, rect_texte_retour)
+          # Afficher le message d'erreur persistant si actif
+        if self.message_erreur_actif and self.message_erreur:
+            police_erreur = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+            texte_erreur = police_erreur.render(self.message_erreur, True, self.ROUGE)
+            rect_erreur = texte_erreur.get_rect(center=(self.LARGEUR//2, 50))
+            self.ecran.blit(texte_erreur, rect_erreur)
+        
+        # Afficher le message de succès persistant si actif
+        if self.message_succes_actif and self.message_succes:
+            police_succes = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+            texte_succes = police_succes.render(self.message_succes, True, self.VERT)
+            rect_succes = texte_succes.get_rect(center=(self.LARGEUR//2, 100))
+            self.ecran.blit(texte_succes, rect_succes)
+        
+        # Rien ici - suppression de l'affichage des couleurs en haut à droite
 
     def compter_couleurs(self):
         """Compte le nombre de carrés de chaque couleur dans le plateau."""
@@ -426,6 +447,20 @@ class EditeurPlateau4x4:
                     comptes[couleur] += 1
         return comptes
 
+    def obtenir_prochaine_couleur_disponible(self):
+        """Retourne la prochaine couleur qui n'a pas encore 4 tuiles."""
+        comptes = self.compter_couleurs()
+        
+        # Ordre de priorité pour les couleurs
+        ordre_couleurs = [self.ROUGE, self.BLEU, self.JAUNE, self.VERT]
+        
+        for couleur in ordre_couleurs:
+            if comptes[str(couleur)] < 4:
+                return couleur
+        
+        # Si toutes les couleurs ont 4 tuiles, retourner la couleur actuelle
+        return self.couleur_selectionnee
+
     def sauvegarder_plateau(self):
         """Sauvegarde le plateau actuel si la validation des couleurs est correcte."""
         comptes = self.compter_couleurs()
@@ -433,17 +468,17 @@ class EditeurPlateau4x4:
         # Vérifier que chaque couleur est utilisée exactement 4 fois
         for couleur, compte in comptes.items():
             if compte != 4:
-                # Afficher un message d'erreur
-                police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
-                texte_erreur = police.render(
-                    "Le plateau doit avoir exactement 4 carrés de chaque couleur!",
-                    True,
-                    self.ROUGE
-                )
-                rect_erreur = texte_erreur.get_rect(center=(self.LARGEUR//2, 50))
-                self.ecran.blit(texte_erreur, rect_erreur)
-                pygame.display.flip()
+                # Activer le message d'erreur persistant
+                self.message_erreur = "Le plateau doit avoir exactement 4 carrés de chaque couleur!"
+                self.message_erreur_actif = True
                 return False  # La sauvegarde a échoué
+          # Si on arrive ici, la sauvegarde est valide - désactiver le message d'erreur
+        self.message_erreur_actif = False
+        self.message_erreur = None
+        
+        # Désactiver tout message de succès précédent
+        self.message_succes_actif = False
+        self.message_succes = None
         
         # Créer une représentation du plateau avec les chemins d'images
         plateau_images = []
@@ -462,19 +497,39 @@ class EditeurPlateau4x4:
                     chemin = None
                 ligne_images.append(chemin)
             plateau_images.append(ligne_images)
-        
-        # Sauvegarder le plateau
+          # Sauvegarder le plateau
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
+        
+        # Trouver le prochain numéro disponible
+        fichiers_existants = [f for f in os.listdir("plateaux") if f.startswith("plateau_") and f.endswith(".json")]
+        numeros_utilises = []
+        for fichier in fichiers_existants:
+            try:
+                # Extraire le numéro du nom de fichier
+                if fichier != "plateau_finale.json":
+                    numero = int(fichier.replace("plateau_", "").replace(".json", ""))
+                    numeros_utilises.append(numero)
+            except ValueError:
+                continue
+        
+        # Trouver le plus petit numéro disponible
+        numero = 0
+        while numero in numeros_utilises:
+            numero += 1
             
-        nouveau_nom = f"plateau_{len(self.plateaux_sauvegardes)}.json"
+        nouveau_nom = f"plateau_{numero}.json"
         chemin = os.path.join("plateaux", nouveau_nom)
         with open(chemin, "w") as f:
             json.dump(plateau_images, f)
-        
-        # Mettre à jour la liste des plateaux
+          # Mettre à jour la liste des plateaux
         self.plateaux_sauvegardes.append(nouveau_nom)
         self.charger_liste_plateaux()  # Rafraîchir la liste
+        
+        # Afficher le message de succès
+        self.message_succes = f"Plateau sauvegardé avec succès sous le nom {nouveau_nom}!"
+        self.message_succes_actif = True
+        
         return True  # La sauvegarde a réussi
 
     def charger_plateau(self, nom_fichier):
@@ -485,8 +540,7 @@ class EditeurPlateau4x4:
                 "assets/image_rouge.png": self.ROUGE,
                 "assets/image_bleue.png": self.BLEU,
                 "assets/image_jaune.png": self.JAUNE,
-                "assets/image_verte.png": self.VERT
-            }
+                "assets/image_verte.png": self.VERT            }
             
             with open(f"plateaux/{nom_fichier}", 'r') as f:
                 plateau_images = json.load(f)
@@ -543,11 +597,14 @@ class EditeurPlateau4x4:
                             print(f"Plateau {nom_fichier} supprimé avec succès!")
                     except Exception as e:
                         print(f"Erreur lors de la suppression du plateau {nom_fichier}: {e}")
-        
-        # Rafraîchir la liste et réinitialiser la sélection
+          # Rafraîchir la liste et réinitialiser la sélection
         self.charger_liste_plateaux()
         self.plateaux_selectionnes.clear()
         self.mode_suppression = False
+        
+        # Ajuster la page courante si nécessaire
+        if self.page_courante >= self.nombre_pages and self.nombre_pages > 0:
+            self.page_courante = self.nombre_pages - 1
 
     def gerer_clic(self, pos):
         """Gère les clics sur l'éditeur."""
@@ -584,13 +641,26 @@ class EditeurPlateau4x4:
                         )
                         if menu_rect.collidepoint(x, y):
                             return
-                            
-                        # Vérifier les clics sur le plateau
+                              # Vérifier les clics sur le plateau
                         if (self.plateau_x <= x < self.plateau_x + self.TAILLE_PLATEAU * self.TAILLE_CASE and
                             self.plateau_y <= y < self.plateau_y + self.TAILLE_PLATEAU * self.TAILLE_CASE):
                             colonne = (x - self.plateau_x) // self.TAILLE_CASE
                             ligne = (y - self.plateau_y) // self.TAILLE_CASE
+                            
+                            # Placer la tuile
                             self.plateau[ligne][colonne] = self.couleur_selectionnee
+                              # Désactiver le message d'erreur quand une tuile est changée
+                            self.message_erreur_actif = False
+                            self.message_erreur = None
+                            
+                            # Désactiver le message de succès quand une tuile est changée
+                            self.message_succes_actif = False
+                            self.message_succes = None
+                              # Vérifier si la couleur actuelle a maintenant 4 tuiles
+                            comptes = self.compter_couleurs()
+                            if comptes[str(self.couleur_selectionnee)] >= 4:
+                                # Changer automatiquement vers la prochaine couleur disponible
+                                self.couleur_selectionnee = self.obtenir_prochaine_couleur_disponible()
                         
                         # Vérifier les clics sur les boutons
                         for info_bouton in self.boutons.values():
@@ -605,6 +675,12 @@ class EditeurPlateau4x4:
                                 elif info_bouton["action"] == "clear":
                                     self.plateau = [[self.NOIR for _ in range(self.TAILLE_PLATEAU)] 
                                                   for _ in range(self.TAILLE_PLATEAU)]
+                                    # Réinitialiser le message d'erreur quand le plateau est effacé
+                                    self.message_erreur_actif = False
+                                    self.message_erreur = None
+                                    # Réinitialiser le message de succès quand le plateau est effacé
+                                    self.message_succes_actif = False
+                                    self.message_succes = None
                     
                     elif self.mode == "selection":
                         # Vérifier le bouton retour
@@ -654,21 +730,57 @@ class EditeurPlateau4x4:
                         elif confirmer_rect and confirmer_rect.collidepoint(x, y):
                             self.supprimer_plateaux_selectionnes()
                         else:
-                            # Vérifier les clics sur les plateaux
-                            for idx, rect in enumerate(self.boutons_plateaux):
-                                if rect.collidepoint(x, y):
-                                    index_reel = self.page_courante * 8 + idx
-                                    if index_reel < len(self.plateaux_sauvegardes):
-                                        if self.mode_suppression:
-                                            if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
-                                                if index_reel in self.plateaux_selectionnes:
-                                                    self.plateaux_selectionnes.remove(index_reel)
+                            # Vérifier les clics sur les boutons de navigation
+                            if self.nombre_pages > 1:
+                                prec_rect = pygame.Rect(
+                                    int(self.debut_x - 100 * self.RATIO_X),
+                                    int(self.debut_y + self.total_hauteur//2),
+                                    int(50 * self.RATIO_X),
+                                    int(50 * self.RATIO_Y)
+                                )
+                                suiv_rect = pygame.Rect(
+                                    int(self.debut_x + self.total_largeur + 50 * self.RATIO_X),
+                                    int(self.debut_y + self.total_hauteur//2),
+                                    int(50 * self.RATIO_X),
+                                    int(50 * self.RATIO_Y)
+                                )
+                                
+                                if prec_rect.collidepoint(x, y) and self.page_courante > 0:
+                                    self.page_courante -= 1
+                                elif suiv_rect.collidepoint(x, y) and self.page_courante < self.nombre_pages - 1:
+                                    self.page_courante += 1
+                                else:
+                                    # Vérifier les clics sur les plateaux
+                                    for idx, rect in enumerate(self.boutons_plateaux):
+                                        if rect.collidepoint(x, y):
+                                            index_reel = self.page_courante * 8 + idx
+                                            if index_reel < len(self.plateaux_sauvegardes):
+                                                if self.mode_suppression:
+                                                    if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
+                                                        if index_reel in self.plateaux_selectionnes:
+                                                            self.plateaux_selectionnes.remove(index_reel)
+                                                        else:
+                                                            self.plateaux_selectionnes.add(index_reel)
                                                 else:
-                                                    self.plateaux_selectionnes.add(index_reel)
-                                        else:
-                                            self.charger_plateau(self.plateaux_sauvegardes[index_reel])
-                                            self.mode = "editeur"
-                                    break
+                                                    self.charger_plateau(self.plateaux_sauvegardes[index_reel])
+                                                    self.mode = "editeur"
+                                            break
+                            else:
+                                # Vérifier les clics sur les plateaux (sans navigation)
+                                for idx, rect in enumerate(self.boutons_plateaux):
+                                    if rect.collidepoint(x, y):
+                                        index_reel = self.page_courante * 8 + idx
+                                        if index_reel < len(self.plateaux_sauvegardes):
+                                            if self.mode_suppression:
+                                                if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
+                                                    if index_reel in self.plateaux_selectionnes:
+                                                        self.plateaux_selectionnes.remove(index_reel)
+                                                    else:
+                                                        self.plateaux_selectionnes.add(index_reel)
+                                            else:
+                                                self.charger_plateau(self.plateaux_sauvegardes[index_reel])
+                                                self.mode = "editeur"
+                                        break
             
             if self.mode == "editeur":
                 self.dessiner()
@@ -679,25 +791,3 @@ class EditeurPlateau4x4:
         
         pygame.quit()
         sys.exit()
-
-    def selectionner_prochaine_couleur_disponible(self):
-        """Sélectionne automatiquement la prochaine couleur disponible."""
-        comptes = self.compter_couleurs()
-        couleurs = [self.ROUGE, self.VERT, self.BLEU, self.JAUNE]
-        
-        # Commencer par la couleur après la couleur actuellement sélectionnée
-        index_actuel = couleurs.index(self.couleur_selectionnee)
-        for i in range(4):
-            index = (index_actuel + i + 1) % 4
-            if comptes[str(couleurs[index])] < 4:
-                self.couleur_selectionnee = couleurs[index]
-                return
-
-    def placer_couleur(self, i, j):
-        """Place une couleur sur le plateau et gère le changement automatique de couleur."""
-        self.plateau[i][j] = self.couleur_selectionnee
-        
-        # Vérifier si la couleur actuelle a atteint sa limite
-        comptes = self.compter_couleurs()
-        if comptes[str(self.couleur_selectionnee)] >= 4:
-            self.selectionner_prochaine_couleur_disponible()
