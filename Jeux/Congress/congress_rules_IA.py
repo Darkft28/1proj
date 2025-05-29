@@ -2,6 +2,7 @@ import random
 import pygame
 import sys
 import json
+from menu.config import get_theme
 
 class Plateau_pion:
     def __init__(self):
@@ -30,7 +31,11 @@ class Plateau_pion:
         self.OFFSET_Y = (self.HAUTEUR - 8 * self.TAILLE_CASE) // 2
         
         # Fond d'écran
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
         # Couleurs

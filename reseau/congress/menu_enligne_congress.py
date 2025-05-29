@@ -2,6 +2,7 @@ import pygame
 import sys
 import subprocess
 import os
+from menu.settings import get_theme
 
 # Répertoire du fichier en cours
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -44,11 +45,12 @@ class MenuPrincipal:
             self.police_info = pygame.font.Font(None, int(30 * self.RATIO_X))
         
         # Fond d'écran
-        try:
-            self.background = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
-            self.background = pygame.transform.scale(self.background, (self.LARGEUR, self.HAUTEUR))
-        except:
-            self.background = None
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Configuration des boutons
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)

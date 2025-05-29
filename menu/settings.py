@@ -4,6 +4,7 @@ from config import get_theme, set_theme
 class Settings:
     def __init__(self, largeur=None, hauteur=None):
         pygame.init()
+        pygame.mixer.init()  # Initialiser le module de mixage audio
         
         self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
         # Obtenir la résolution de l'écran
@@ -43,17 +44,17 @@ class Settings:
         pygame.display.set_caption("Paramètres")
         
         self.options_theme = ["Clair", "Sombre"]
-        self.options_langue = ["Francais", "English"]
+        self.options_musique = ["Sans son", "Smooth Jazz Saxophone"]
 
         # Options sélectionnées
         self.selected_resolution = 1  # Index par défaut 
         self.selected_theme = 0       # Index par défaut 
-        self.selected_langue = 0      # Index par défaut 
+        self.selected_musique = 0  # Index par défaut
 
         # État des menus déroulants (ouvert/fermé)
         self.dropdown_resolution_ouvert = False
         self.dropdown_theme_ouvert = False
-        self.dropdown_langue_ouvert = False
+        self.dropdown_musique_ouvert = False
 
         # Créer les dropdowns
         self.dropdowns = self._creer_dropdowns()
@@ -70,7 +71,7 @@ class Settings:
         """Crée les menus déroulants pour les paramètres"""
         # Calculer les positions verticales pour chaque section
         y_theme = int(600 * self.RATIO_Y)
-        y_langue = y_theme + self.ESPACE_SECTIONS
+        y_musique = y_theme + self.ESPACE_SECTIONS
 
         # Position horizontale centrée pour les menus déroulants
         x_dropdown = (self.LARGEUR - self.LARGEUR_DROPDOWN) // 2
@@ -85,15 +86,15 @@ class Settings:
                 "ouvert": self.dropdown_theme_ouvert,
                 "options_rects": []
             },
-            "langue": {
-                "titre": "Langue",
-                "dropdown_rect": pygame.Rect(x_dropdown, y_langue, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
-                "options": self.options_langue,
-                "selected": self.selected_langue,
-                "ouvert": self.dropdown_langue_ouvert,
+            "musique": {
+                "titre": "Musique",
+                "dropdown_rect": pygame.Rect(x_dropdown, y_musique, self.LARGEUR_DROPDOWN, self.HAUTEUR_DROPDOWN),
+                "options": self.options_musique,
+                "selected": self.selected_musique,
+                "ouvert": self.dropdown_musique_ouvert,
                 "options_rects": []
-            }
-        }
+            },
+    }
 
         return dropdowns
 
@@ -102,8 +103,8 @@ class Settings:
         self.ecran.blit(self.background_image, (0, 0))
         
         # Police personnalisée pour tous les textes
-        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 48)  # Titre plus petit
-        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32) # Boutons plus petits
+        police_titre = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 25)  # Titre plus petit
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 25) # Boutons plus petits
         
         # Titre principal
         titre = police_titre.render("PARAMETRES :", True, self.BLANC)
@@ -233,6 +234,14 @@ class Settings:
                                         else:
                                             self.background_image = pygame.image.load("assets/menu/menu-claire.png")
                                         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
+                                    
+                                    if nom == "musique":
+                                        self.selected_musique = i
+                                        if i == 0:
+                                            pygame.mixer.music.stop()
+                                        elif i == 1:
+                                            pygame.mixer.music.load("assets/musiques/Smooth_Jazz_Saxophone.mp3")
+                                            pygame.mixer.music.play(-1)  # -1 = boucle infinie
 
                     # Si on a cliqué en dehors des menus déroulants, tous les fermer
                     if not dropdown_clique:
@@ -245,5 +254,4 @@ class Settings:
 if __name__ == "__main__":
     start = Settings()
     start.executer()
-
 

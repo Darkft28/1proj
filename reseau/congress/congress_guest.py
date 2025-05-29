@@ -5,6 +5,7 @@ import socket
 import threading
 import pyperclip
 import os
+from menu.config import get_theme, set_theme
 
 # Répertoire du fichier en cours
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -34,11 +35,12 @@ class Congress_guest:
         self.OFFSET_Y = (self.HAUTEUR - 8 * self.TAILLE_CASE) // 2
         
         # Fond d'écran
-        try:
-            self.background_image = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
-            self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
-        except:
-            self.background_image = None
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
         # Couleurs
         self.BLANC = (255, 255, 255)
