@@ -161,9 +161,20 @@ class MenuPrincipal:
     
     def lancer_host(self):
         pygame.quit()
-        # Lancer le fichier host
-        subprocess.Popen([sys.executable, "reseau/congress/congress_host.py"])
-        sys.exit()
+        # Sélection du plateau comme en local
+        from Board.board_complet import SelecteurPlateau
+        selecteur = SelecteurPlateau()
+        plateau_final = selecteur.executer()
+        if plateau_final:
+            # Sauvegarder le plateau temporairement (par exemple dans un fichier JSON)
+            import json
+            with open("plateaux/plateau_temp_host.json", "w") as f:
+                json.dump(plateau_final, f)
+            # Lancer le fichier host
+            import subprocess
+            import sys
+            subprocess.Popen([sys.executable, "reseau/congress/congress_host.py"])
+            sys.exit()
     
     def lancer_guest(self):
         pygame.quit()

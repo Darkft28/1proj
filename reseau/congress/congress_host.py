@@ -90,8 +90,7 @@ class Congress_host:
                         [1, 0, 0, 0, 0, 0, 0, 2],
                         [0, 0, 0, 0, 0, 0, 0, 0],
                         [2, 0, 0, 0, 0, 0, 0, 1],
-                        [0, 1, 0, 2, 1, 0, 2, 0]]
-        
+                        [0, 1, 0, 2, 1, 0, 2, 0]]        
         # Configuration des boutons
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
@@ -118,6 +117,26 @@ class Congress_host:
         
         # Initialiser le serveur
         self.initialiser_serveur()
+
+        # Charger le plateau personnalisé si disponible
+        try:
+            with open("plateaux/plateau_temp_host.json", "r") as f:
+                self.plateau_personnalise = json.load(f)
+        except Exception as e:
+            print("Erreur chargement plateau personnalisé:", e)
+            self.plateau_personnalise = None
+
+        if self.plateau_personnalise:
+            self.plateau = self.plateau_personnalise
+        else:
+            self.plateau = [[0, 2, 0, 1, 2, 0, 1, 0],
+                            [1, 0, 0, 0, 0, 0, 0, 2],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [2, 0, 0, 0, 0, 0, 0, 1],
+                            [1, 0, 0, 0, 0, 0, 0, 2],
+                            [0, 0, 0, 0, 0, 0, 0, 0],
+                            [2, 0, 0, 0, 0, 0, 0, 1],
+                            [0, 1, 0, 2, 1, 0, 2, 0]]
 
     def generer_code_salon(self):
         return ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -154,6 +173,11 @@ class Congress_host:
         # Recevoir la confirmation
         confirmation = self.client_socket.recv(1024).decode()
         if confirmation == "OK":
+            # Envoyer le plateau personnalisé au guest
+            import json
+            plateau_json = json.dumps(self.plateau)
+            self.client_socket.sendall(plateau_json.encode() + b"<END>")
+            
             self.connexion_etablie = True
             self.ecran_attente = False
             
