@@ -2,6 +2,10 @@ import pygame
 import sys
 import json
 import os
+import pygame
+import sys
+import json
+import os
 from menu.config import get_theme
 
 class EditeurPlateau4x4:
@@ -91,6 +95,9 @@ class EditeurPlateau4x4:
         self.plateau_modifie = False  # Pour suivre si des modifications ont été faites
         self.message_erreur = None  # Pour garder le message d'erreur affiché
         self.derniere_sauvegarde = None  # Pour comparer avec l'état actuel
+        self.message_erreur_actif = False  # Pour gérer l'affichage persistant du message d'erreur
+        self.message_succes = None  # Pour afficher le message de succès
+        self.message_succes_actif = False  # Pour gérer l'affichage persistant du message de succès
         
         # Boutons
         self.boutons = self._creer_boutons()
@@ -402,15 +409,28 @@ class EditeurPlateau4x4:
                 if "texte" in info_bouton:
                     texte = police_bouton.render(info_bouton["texte"], True, self.BLANC)
                     rect_texte = texte.get_rect(center=rect.center)
-                    self.ecran.blit(texte, rect_texte)
-
-        # Bouton retour (identique à settings.py)
+                    self.ecran.blit(texte, rect_texte)        # Bouton retour (identique à settings.py)
         pygame.draw.rect(self.ecran, self.bouton_retour["couleur"], self.bouton_retour["rect"], border_radius=15)
-        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_retour["rect"], 2, border_radius=15)        
         police_retour = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 28)
         texte_retour = police_retour.render(self.bouton_retour["texte"], True, self.BLANC)
         rect_texte_retour = texte_retour.get_rect(center=self.bouton_retour["rect"].center)
-        self.ecran.blit(texte_retour, rect_texte_retour)        # Rien ici - suppression de l'affichage des couleurs en haut à droite
+        self.ecran.blit(texte_retour, rect_texte_retour)
+          # Afficher le message d'erreur persistant si actif
+        if self.message_erreur_actif and self.message_erreur:
+            police_erreur = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+            texte_erreur = police_erreur.render(self.message_erreur, True, self.ROUGE)
+            rect_erreur = texte_erreur.get_rect(center=(self.LARGEUR//2, 50))
+            self.ecran.blit(texte_erreur, rect_erreur)
+        
+        # Afficher le message de succès persistant si actif
+        if self.message_succes_actif and self.message_succes:
+            police_succes = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+            texte_succes = police_succes.render(self.message_succes, True, self.VERT)
+            rect_succes = texte_succes.get_rect(center=(self.LARGEUR//2, 100))
+            self.ecran.blit(texte_succes, rect_succes)
+        
+        # Rien ici - suppression de l'affichage des couleurs en haut à droite
 
     def compter_couleurs(self):
         """Compte le nombre de carrés de chaque couleur dans le plateau."""
@@ -427,6 +447,20 @@ class EditeurPlateau4x4:
                     comptes[couleur] += 1
         return comptes
 
+    def obtenir_prochaine_couleur_disponible(self):
+        """Retourne la prochaine couleur qui n'a pas encore 4 tuiles."""
+        comptes = self.compter_couleurs()
+        
+        # Ordre de priorité pour les couleurs
+        ordre_couleurs = [self.ROUGE, self.BLEU, self.JAUNE, self.VERT]
+        
+        for couleur in ordre_couleurs:
+            if comptes[str(couleur)] < 4:
+                return couleur
+        
+        # Si toutes les couleurs ont 4 tuiles, retourner la couleur actuelle
+        return self.couleur_selectionnee
+
     def sauvegarder_plateau(self):
         """Sauvegarde le plateau actuel si la validation des couleurs est correcte."""
         comptes = self.compter_couleurs()
@@ -434,17 +468,17 @@ class EditeurPlateau4x4:
         # Vérifier que chaque couleur est utilisée exactement 4 fois
         for couleur, compte in comptes.items():
             if compte != 4:
-                # Afficher un message d'erreur
-                police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
-                texte_erreur = police.render(
-                    "Le plateau doit avoir exactement 4 carrés de chaque couleur!",
-                    True,
-                    self.ROUGE
-                )
-                rect_erreur = texte_erreur.get_rect(center=(self.LARGEUR//2, 50))
-                self.ecran.blit(texte_erreur, rect_erreur)
-                pygame.display.flip()
+                # Activer le message d'erreur persistant
+                self.message_erreur = "Le plateau doit avoir exactement 4 carrés de chaque couleur!"
+                self.message_erreur_actif = True
                 return False  # La sauvegarde a échoué
+          # Si on arrive ici, la sauvegarde est valide - désactiver le message d'erreur
+        self.message_erreur_actif = False
+        self.message_erreur = None
+        
+        # Désactiver tout message de succès précédent
+        self.message_succes_actif = False
+        self.message_succes = None
         
         # Créer une représentation du plateau avec les chemins d'images
         plateau_images = []
@@ -488,10 +522,14 @@ class EditeurPlateau4x4:
         chemin = os.path.join("plateaux", nouveau_nom)
         with open(chemin, "w") as f:
             json.dump(plateau_images, f)
-        
-        # Mettre à jour la liste des plateaux
+          # Mettre à jour la liste des plateaux
         self.plateaux_sauvegardes.append(nouveau_nom)
         self.charger_liste_plateaux()  # Rafraîchir la liste
+        
+        # Afficher le message de succès
+        self.message_succes = f"Plateau sauvegardé avec succès sous le nom {nouveau_nom}!"
+        self.message_succes_actif = True
+        
         return True  # La sauvegarde a réussi
 
     def charger_plateau(self, nom_fichier):
@@ -603,13 +641,26 @@ class EditeurPlateau4x4:
                         )
                         if menu_rect.collidepoint(x, y):
                             return
-                            
-                        # Vérifier les clics sur le plateau
+                              # Vérifier les clics sur le plateau
                         if (self.plateau_x <= x < self.plateau_x + self.TAILLE_PLATEAU * self.TAILLE_CASE and
                             self.plateau_y <= y < self.plateau_y + self.TAILLE_PLATEAU * self.TAILLE_CASE):
                             colonne = (x - self.plateau_x) // self.TAILLE_CASE
                             ligne = (y - self.plateau_y) // self.TAILLE_CASE
+                            
+                            # Placer la tuile
                             self.plateau[ligne][colonne] = self.couleur_selectionnee
+                              # Désactiver le message d'erreur quand une tuile est changée
+                            self.message_erreur_actif = False
+                            self.message_erreur = None
+                            
+                            # Désactiver le message de succès quand une tuile est changée
+                            self.message_succes_actif = False
+                            self.message_succes = None
+                              # Vérifier si la couleur actuelle a maintenant 4 tuiles
+                            comptes = self.compter_couleurs()
+                            if comptes[str(self.couleur_selectionnee)] >= 4:
+                                # Changer automatiquement vers la prochaine couleur disponible
+                                self.couleur_selectionnee = self.obtenir_prochaine_couleur_disponible()
                         
                         # Vérifier les clics sur les boutons
                         for info_bouton in self.boutons.values():
@@ -624,6 +675,12 @@ class EditeurPlateau4x4:
                                 elif info_bouton["action"] == "clear":
                                     self.plateau = [[self.NOIR for _ in range(self.TAILLE_PLATEAU)] 
                                                   for _ in range(self.TAILLE_PLATEAU)]
+                                    # Réinitialiser le message d'erreur quand le plateau est effacé
+                                    self.message_erreur_actif = False
+                                    self.message_erreur = None
+                                    # Réinitialiser le message de succès quand le plateau est effacé
+                                    self.message_succes_actif = False
+                                    self.message_succes = None
                     
                     elif self.mode == "selection":
                         # Vérifier le bouton retour
@@ -734,25 +791,3 @@ class EditeurPlateau4x4:
         
         pygame.quit()
         sys.exit()
-
-    def selectionner_prochaine_couleur_disponible(self):
-        """Sélectionne automatiquement la prochaine couleur disponible."""
-        comptes = self.compter_couleurs()
-        couleurs = [self.ROUGE, self.VERT, self.BLEU, self.JAUNE]
-        
-        # Commencer par la couleur après la couleur actuellement sélectionnée
-        index_actuel = couleurs.index(self.couleur_selectionnee)
-        for i in range(4):
-            index = (index_actuel + i + 1) % 4
-            if comptes[str(couleurs[index])] < 4:
-                self.couleur_selectionnee = couleurs[index]
-                return
-
-    def placer_couleur(self, i, j):
-        """Place une couleur sur le plateau et gère le changement automatique de couleur."""
-        self.plateau[i][j] = self.couleur_selectionnee
-        
-        # Vérifier si la couleur actuelle a atteint sa limite
-        comptes = self.compter_couleurs()
-        if comptes[str(self.couleur_selectionnee)] >= 4:
-            self.selectionner_prochaine_couleur_disponible()
