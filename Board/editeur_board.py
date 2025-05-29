@@ -147,11 +147,13 @@ class EditeurPlateau4x4:
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
             
-        # Charger tous les fichiers JSON
+        # Charger tous les fichiers JSON et les trier pour maintenir un ordre stable
         self.plateaux_sauvegardes = [f for f in os.listdir("plateaux") if f.endswith('.json')]
+        # Trier par nom pour maintenir un ordre cohérent
+        self.plateaux_sauvegardes.sort()
         
         # Calculer le nombre total de pages
-        self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
+        self.nombre_pages = max(1, (len(self.plateaux_sauvegardes) + 7) // 8)
 
     def dessiner_ecran_selection(self):
         self.ecran.blit(self.background_image, (0, 0))
@@ -217,15 +219,10 @@ class EditeurPlateau4x4:
             colonne = i % 4
             x = self.debut_x + colonne * (taille_miniature + espace)
             y = self.debut_y + ligne * (taille_miniature + espace)
-            
             rect = pygame.Rect(x, y, taille_miniature, taille_miniature)
             self.boutons_plateaux.append(rect)
             
             index = debut_index + i
-            
-            # Afficher un cadre de sélection si le plateau est sélectionné pour suppression
-            if self.mode_suppression and index in self.plateaux_selectionnes:
-                pygame.draw.rect(self.ecran, self.ROUGE, rect, 4)
             
             # Afficher la prévisualisation du plateau
             try:
@@ -261,6 +258,10 @@ class EditeurPlateau4x4:
                             
             except Exception as e:
                 print(f"Erreur lors du chargement de la miniature {index}: {e}")
+            
+            # Afficher un cadre de sélection rouge APRÈS le contenu si le plateau est sélectionné pour suppression
+            if self.mode_suppression and index in self.plateaux_selectionnes:
+                pygame.draw.rect(self.ecran, self.ROUGE, rect, 6)  # Bordure plus épaisse pour plus de visibilité
 
         # Boutons de navigation (si plusieurs pages)
         if self.nombre_pages > 1:
@@ -462,12 +463,28 @@ class EditeurPlateau4x4:
                     chemin = None
                 ligne_images.append(chemin)
             plateau_images.append(ligne_images)
-        
-        # Sauvegarder le plateau
+          # Sauvegarder le plateau
         if not os.path.exists("plateaux"):
             os.makedirs("plateaux")
+        
+        # Trouver le prochain numéro disponible
+        fichiers_existants = [f for f in os.listdir("plateaux") if f.startswith("plateau_") and f.endswith(".json")]
+        numeros_utilises = []
+        for fichier in fichiers_existants:
+            try:
+                # Extraire le numéro du nom de fichier
+                if fichier != "plateau_finale.json":
+                    numero = int(fichier.replace("plateau_", "").replace(".json", ""))
+                    numeros_utilises.append(numero)
+            except ValueError:
+                continue
+        
+        # Trouver le plus petit numéro disponible
+        numero = 0
+        while numero in numeros_utilises:
+            numero += 1
             
-        nouveau_nom = f"plateau_{len(self.plateaux_sauvegardes)}.json"
+        nouveau_nom = f"plateau_{numero}.json"
         chemin = os.path.join("plateaux", nouveau_nom)
         with open(chemin, "w") as f:
             json.dump(plateau_images, f)
@@ -485,8 +502,7 @@ class EditeurPlateau4x4:
                 "assets/image_rouge.png": self.ROUGE,
                 "assets/image_bleue.png": self.BLEU,
                 "assets/image_jaune.png": self.JAUNE,
-                "assets/image_verte.png": self.VERT
-            }
+                "assets/image_verte.png": self.VERT            }
             
             with open(f"plateaux/{nom_fichier}", 'r') as f:
                 plateau_images = json.load(f)
@@ -543,11 +559,14 @@ class EditeurPlateau4x4:
                             print(f"Plateau {nom_fichier} supprimé avec succès!")
                     except Exception as e:
                         print(f"Erreur lors de la suppression du plateau {nom_fichier}: {e}")
-        
-        # Rafraîchir la liste et réinitialiser la sélection
+          # Rafraîchir la liste et réinitialiser la sélection
         self.charger_liste_plateaux()
         self.plateaux_selectionnes.clear()
         self.mode_suppression = False
+        
+        # Ajuster la page courante si nécessaire
+        if self.page_courante >= self.nombre_pages and self.nombre_pages > 0:
+            self.page_courante = self.nombre_pages - 1
 
     def gerer_clic(self, pos):
         """Gère les clics sur l'éditeur."""
@@ -654,21 +673,57 @@ class EditeurPlateau4x4:
                         elif confirmer_rect and confirmer_rect.collidepoint(x, y):
                             self.supprimer_plateaux_selectionnes()
                         else:
-                            # Vérifier les clics sur les plateaux
-                            for idx, rect in enumerate(self.boutons_plateaux):
-                                if rect.collidepoint(x, y):
-                                    index_reel = self.page_courante * 8 + idx
-                                    if index_reel < len(self.plateaux_sauvegardes):
-                                        if self.mode_suppression:
-                                            if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
-                                                if index_reel in self.plateaux_selectionnes:
-                                                    self.plateaux_selectionnes.remove(index_reel)
+                            # Vérifier les clics sur les boutons de navigation
+                            if self.nombre_pages > 1:
+                                prec_rect = pygame.Rect(
+                                    int(self.debut_x - 100 * self.RATIO_X),
+                                    int(self.debut_y + self.total_hauteur//2),
+                                    int(50 * self.RATIO_X),
+                                    int(50 * self.RATIO_Y)
+                                )
+                                suiv_rect = pygame.Rect(
+                                    int(self.debut_x + self.total_largeur + 50 * self.RATIO_X),
+                                    int(self.debut_y + self.total_hauteur//2),
+                                    int(50 * self.RATIO_X),
+                                    int(50 * self.RATIO_Y)
+                                )
+                                
+                                if prec_rect.collidepoint(x, y) and self.page_courante > 0:
+                                    self.page_courante -= 1
+                                elif suiv_rect.collidepoint(x, y) and self.page_courante < self.nombre_pages - 1:
+                                    self.page_courante += 1
+                                else:
+                                    # Vérifier les clics sur les plateaux
+                                    for idx, rect in enumerate(self.boutons_plateaux):
+                                        if rect.collidepoint(x, y):
+                                            index_reel = self.page_courante * 8 + idx
+                                            if index_reel < len(self.plateaux_sauvegardes):
+                                                if self.mode_suppression:
+                                                    if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
+                                                        if index_reel in self.plateaux_selectionnes:
+                                                            self.plateaux_selectionnes.remove(index_reel)
+                                                        else:
+                                                            self.plateaux_selectionnes.add(index_reel)
                                                 else:
-                                                    self.plateaux_selectionnes.add(index_reel)
-                                        else:
-                                            self.charger_plateau(self.plateaux_sauvegardes[index_reel])
-                                            self.mode = "editeur"
-                                    break
+                                                    self.charger_plateau(self.plateaux_sauvegardes[index_reel])
+                                                    self.mode = "editeur"
+                                            break
+                            else:
+                                # Vérifier les clics sur les plateaux (sans navigation)
+                                for idx, rect in enumerate(self.boutons_plateaux):
+                                    if rect.collidepoint(x, y):
+                                        index_reel = self.page_courante * 8 + idx
+                                        if index_reel < len(self.plateaux_sauvegardes):
+                                            if self.mode_suppression:
+                                                if self.plateaux_sauvegardes[index_reel] != "plateau_finale.json":
+                                                    if index_reel in self.plateaux_selectionnes:
+                                                        self.plateaux_selectionnes.remove(index_reel)
+                                                    else:
+                                                        self.plateaux_selectionnes.add(index_reel)
+                                            else:
+                                                self.charger_plateau(self.plateaux_sauvegardes[index_reel])
+                                                self.mode = "editeur"
+                                        break
             
             if self.mode == "editeur":
                 self.dessiner()
