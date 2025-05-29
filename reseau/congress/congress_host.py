@@ -515,7 +515,6 @@ class Congress_host:
     def run(self):
         clock = pygame.time.Clock()
         while self.ecran_attente:
-            # Affiche la salle d'attente
             self.afficher_ecran_attente()
             pygame.display.flip()
             for event in pygame.event.get():
@@ -523,25 +522,93 @@ class Congress_host:
                     self.ecran_attente = False
                     pygame.quit()
                     sys.exit()
-                # ... gestion des boutons retour/copie ...
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = event.pos
+                    if hasattr(self, 'bouton_retour') and self.bouton_retour.collidepoint(x, y):
+                        self.ecran_attente = False
+                        if self.server_socket:
+                            self.server_socket.close()
+                        pygame.quit()
+                        import subprocess
+                        subprocess.Popen([sys.executable, "menu/menu.py"])
+                        sys.exit()
+                # Ajoute la gestion du bouton copier si besoin
 
-        # Quand la connexion est établie, on passe à la partie
-        while not self.game_over:
-            # Affiche le jeu (plateau, pions, etc.)
-            # ... boucle de jeu normale ...
+        # Partie principale
+        self.running = True
+        while self.running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+                    if self.server_socket:
+                        self.server_socket.close()
+                    pygame.quit()
+                    sys.exit()
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    x, y = event.pos
+                    if not self.game_over and self.joueur_actuel == self.mon_numero:
+                        if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
+                            self.game_over = True
+                            self.gagnant = "abandon"
+                            self.envoyer_message("ABANDON")
+                        else:
+                            self.gerer_clic()
+                    elif self.game_over:
+                        if hasattr(self, 'bouton_quitter') and self.bouton_quitter.collidepoint(x, y):
+                            self.running = False
+                            if self.server_socket:
+                                self.server_socket.close()
+                            pygame.quit()
+                            import subprocess
+                            subprocess.Popen([sys.executable, "menu/menu.py"])
+                            sys.exit()
+            if self.background_image:
+                self.ecran.blit(self.background_image, (0, 0))
+            else:
+                self.ecran.fill(self.BLANC)
+            self.dessiner_plateau()
+            self.afficher_preview_mouvements()
+            self.afficher_pions()
+            self.afficher_pion_selectionne()
+            if not self.game_over:
+                self.afficher_tour()
+                self.afficher_info_jeu()
+            else:
+                self.afficher_fin_de_jeu()
             pygame.display.flip()
             clock.tick(60)
+        if self.server_socket:
+            self.server_socket.close()
         pygame.quit()
 
     def dessiner_plateau(self):
         for i in range(8):
             for j in range(8):
-                couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
-                pygame.draw.rect(self.ecran, couleur, 
-                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                     self.OFFSET_Y + i * self.TAILLE_CASE, 
-                     self.TAILLE_CASE, self.TAILLE_CASE))
-                # Si tu veux afficher les images selon le plateau personnalisé, adapte ici
+                if hasattr(self, 'plateau_images'):
+                    image_path = self.plateau_images[i][j]
+                    if image_path in self.images:
+                        img = self.images[image_path]
+                    else:
+                        try:
+                            img = pygame.image.load(image_path).convert_alpha()
+                            img = pygame.transform.scale(img, (self.TAILLE_CASE, self.TAILLE_CASE))
+                            self.images[image_path] = img
+                        except:
+                            img = None
+                    if img:
+                        self.ecran.blit(img, (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE))
+                    else:
+                        couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                        pygame.draw.rect(self.ecran, couleur,
+                            (self.OFFSET_X + j * self.TAILLE_CASE,
+                            self.OFFSET_Y + i * self.TAILLE_CASE,
+                            self.TAILLE_CASE, self.TAILLE_CASE))
+                else:
+                    couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                    pygame.draw.rect(self.ecran, couleur,
+                        (self.OFFSET_X + j * self.TAILLE_CASE,
+                        self.OFFSET_Y + i * self.TAILLE_CASE,
+                        self.TAILLE_CASE, self.TAILLE_CASE))
 
     def afficher_preview_mouvements(self):
         if self.pion_selectionne and self.mouvements_possibles:
@@ -742,4 +809,3 @@ class Congress_host:
 if __name__ == "__main__":
     jeu = Congress_host()
     jeu.run()
-

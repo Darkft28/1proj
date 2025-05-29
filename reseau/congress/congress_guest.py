@@ -130,6 +130,7 @@ class Congress_guest:
                     data += self.socket_client.recv(4096)
                 plateau_json = data[:-5].decode()
                 self.plateau = json.loads(plateau_json)
+                self.plateau_images = json.loads(plateau_json)
                 
                 # Thread pour recevoir les messages
                 thread_recevoir = threading.Thread(target=self.recevoir_messages)
@@ -297,22 +298,12 @@ class Congress_guest:
 
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateaux/plateau_19.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            # Adapter le plateau si nécessaire
-            if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
-                plateau_complet = []
-                for i in range(8):
-                    ligne_data = []
-                    for j in range(8):
-                        ligne_data.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
-                    plateau_complet.append(ligne_data)
-                plateau_images = plateau_complet
-            
+            # Utilise le plateau reçu du host (self.plateau_personnalise ou self.plateau)
+            plateau_images = self.plateau_images if hasattr(self, 'plateau_images') else None
+            if plateau_images is None:
+                # Si tu as reçu une matrice d'images du host, stocke-la dans self.plateau_images à la connexion
+                return None
             image_path = plateau_images[ligne][col]
-            
-            # Déterminer la couleur selon le nom de fichier
             if "rouge" in image_path.lower():
                 return "rouge"
             elif "bleu" in image_path.lower():
@@ -323,7 +314,6 @@ class Congress_guest:
                 return "vert"
             else:
                 return None
-                
         except Exception as e:
             print(f"Erreur lors de la détection de couleur: {e}")
             # Fallback pattern
@@ -601,12 +591,31 @@ class Congress_guest:
     def dessiner_plateau(self):
         for i in range(8):
             for j in range(8):
-                couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
-                pygame.draw.rect(self.ecran, couleur, 
-                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                     self.OFFSET_Y + i * self.TAILLE_CASE, 
-                     self.TAILLE_CASE, self.TAILLE_CASE))
-                # Si tu veux afficher des images selon le plateau personnalisé, adapte ici
+                if hasattr(self, 'plateau_images'):
+                    image_path = self.plateau_images[i][j]
+                    if image_path in self.images:
+                        img = self.images[image_path]
+                    else:
+                        try:
+                            img = pygame.image.load(image_path).convert_alpha()
+                            img = pygame.transform.scale(img, (self.TAILLE_CASE, self.TAILLE_CASE))
+                            self.images[image_path] = img
+                        except:
+                            img = None
+                    if img:
+                        self.ecran.blit(img, (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE))
+                    else:
+                        couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                        pygame.draw.rect(self.ecran, couleur,
+                            (self.OFFSET_X + j * self.TAILLE_CASE,
+                            self.OFFSET_Y + i * self.TAILLE_CASE,
+                            self.TAILLE_CASE, self.TAILLE_CASE))
+                else:
+                    couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                    pygame.draw.rect(self.ecran, couleur,
+                        (self.OFFSET_X + j * self.TAILLE_CASE,
+                        self.OFFSET_Y + i * self.TAILLE_CASE,
+                        self.TAILLE_CASE, self.TAILLE_CASE))
 
     def afficher_preview_mouvements(self):
         if self.pion_selectionne and self.mouvements_possibles:
