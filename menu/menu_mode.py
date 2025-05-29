@@ -135,15 +135,28 @@ class MenuMode:
                 print("Erreur lors de l'import du jeu Katarenga:", e)
                 
         elif self.jeu == "Isolation":
-            try:
-                # Lancer Isolation avec le mode sélectionné
-                print(f"Lancement d'Isolation en mode {mode}")
-                # TODO: Intégrer le code pour lancer Isolation
-                # from Jeux.Isolation.isolation_main import Isolation
-                # jeu = Isolation(mode)
-                # jeu.run()
+            try :
+                if mode == "En ligne":
+                        from reseau.Isolation.menu_principal import MenuPrincipal
+                        menu = MenuPrincipal()
+                        menu.run()
+                else:
+                    from Board.board_complet import SelecteurPlateau
+                    selecteur = SelecteurPlateau()
+                    plateau_final = selecteur.executer()
+                    if plateau_final:
+                        if mode == "Joueur VS IA":
+                            from Jeux.Isolation.isolation_rules_IA import Plateau_pion
+                            jeu = Plateau_pion()
+                        else:
+                            from Jeux.Isolation.isolation_rules import Plateau_pion
+                            jeu = Plateau_pion()
+                        jeu.run()
             except ImportError as e:
                 print("Erreur lors de l'import du jeu Isolation:", e)
+            except Exception as e:
+                print(f"Erreur lors du lancement de Isolation: {e}")
+
 
 if __name__ == "__main__":
     # Test avec Congress par défaut

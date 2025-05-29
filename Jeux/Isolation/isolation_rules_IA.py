@@ -131,7 +131,7 @@ class Plateau_pion:
 
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateaux/plateau_18.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -319,7 +319,7 @@ class Plateau_pion:
 
     def dessiner_plateau(self):
         try:
-            with open("plateaux/plateau_18.json", 'r') as f:
+            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici aussi
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -523,4 +523,4 @@ class Plateau_pion:
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
-    
+
