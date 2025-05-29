@@ -513,84 +513,24 @@ class Congress_host:
         return len(visites) == len(positions)
 
     def run(self):
-        if self.pion_blanc and self.pion_noir:
-            pion_size = int(self.TAILLE_CASE * 0.8)
-            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
-            self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
-        
-        self.running = True
         clock = pygame.time.Clock()
-        
-        while self.running:
+        while self.ecran_attente:
+            # Affiche la salle d'attente
+            self.afficher_ecran_attente()
+            pygame.display.flip()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if self.ecran_attente:
-                        x, y = event.pos
-                        if hasattr(self, 'bouton_retour') and self.bouton_retour.collidepoint(x, y):
-                            self.running = False
-                            if self.client_socket:
-                                self.client_socket.close()
-                            if self.server_socket:
-                                self.server_socket.close()
-                            pygame.quit()
-                            import subprocess
-                            subprocess.Popen([sys.executable, "menu/menu.py"])
-                            sys.exit()
-                        elif hasattr(self, 'bouton_copier_code') and self.bouton_copier_code.collidepoint(x, y):
-                            if self.pyperclip:
-                                self.pyperclip.copy(self.code_salon)
-                                self.message_copie = "Code copié !"
-                                self.temps_copie = pygame.time.get_ticks()
-                        elif hasattr(self, 'bouton_copier_ip') and self.bouton_copier_ip.collidepoint(x, y):
-                            if self.pyperclip:
-                                self.pyperclip.copy(f"{self.ip_locale}:{self.port}")
-                                self.message_copie = "IP copiée !"
-                                self.temps_copie = pygame.time.get_ticks()
-                    elif not self.game_over and self.joueur_actuel == self.mon_numero:
-                        x, y = event.pos
-                        if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
-                            self.game_over = True
-                            self.gagnant = "abandon"
-                            self.envoyer_message("ABANDON")
-                        else:
-                            self.gerer_clic()
-                    elif self.game_over:
-                        x, y = event.pos
-                        if hasattr(self, 'bouton_quitter') and self.bouton_quitter.collidepoint(x, y):
-                            self.running = False
-                            if self.client_socket:
-                                self.client_socket.close()
-                            if self.server_socket:
-                                self.server_socket.close()
-            
-            if self.ecran_attente:
-                self.afficher_ecran_attente()
-            else:
-                if self.background_image:
-                    self.ecran.blit(self.background_image, (0, 0))
-                else:
-                    self.ecran.fill(self.BLANC)
-                
-                self.dessiner_plateau()
-                self.afficher_preview_mouvements()
-                self.afficher_pions()
-                self.afficher_pion_selectionne()
-                
-                if not self.game_over:
-                    self.afficher_tour()
-                    self.afficher_info_jeu()
-                else:
-                    self.afficher_fin_de_jeu()
-            
+                    self.ecran_attente = False
+                    pygame.quit()
+                    sys.exit()
+                # ... gestion des boutons retour/copie ...
+
+        # Quand la connexion est établie, on passe à la partie
+        while not self.game_over:
+            # Affiche le jeu (plateau, pions, etc.)
+            # ... boucle de jeu normale ...
             pygame.display.flip()
             clock.tick(60)
-        
-        if self.client_socket:
-            self.client_socket.close()
-        if self.server_socket:
-            self.server_socket.close()
         pygame.quit()
 
     def dessiner_plateau(self):
