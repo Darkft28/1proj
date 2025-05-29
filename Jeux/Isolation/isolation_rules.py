@@ -343,11 +343,13 @@ class Plateau_pion:
         for i in range(8):
             for j in range(8):
                 if self.cases_bloquees[i][j]:
-                    # Case entièrement noire
-                    pygame.draw.rect(self.ecran, self.NOIR, 
-                                   (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE, 
-                                    self.TAILLE_CASE, self.TAILLE_CASE))
+                    # Crée une surface semi-transparente grise
+                    surf = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
+                    surf.fill((100, 100, 100, 200))  # Gris avec alpha (120/255)
+                    self.ecran.blit(
+                        surf,
+                        (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE)
+                    )
 
     def afficher_pions(self):
         pion_size = int(self.TAILLE_CASE * 0.8)  
