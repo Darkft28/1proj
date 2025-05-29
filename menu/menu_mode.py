@@ -102,31 +102,22 @@ class MenuMode:
         
         if self.jeu == "Congress":
             try:
-                # Sélection du plateau pour Congress
-                from Board.board_complet import SelecteurPlateau
-                selecteur = SelecteurPlateau()
-                plateau_final = selecteur.executer()
-                if plateau_final:
-                    from Jeux.Congress.congress_rules import Plateau_pion
-                    
-                    # Essayer différentes façons d'initialiser selon la signature de la classe
-                    try:
-                        # Essai 1: avec le mode comme paramètre
-                        jeu = Plateau_pion(mode)
-                    except TypeError:
-                        try:
-                            # Essai 2: sans paramètre, puis définir le mode
+                if mode == "En ligne":
+                    from reseau.congress.menu_enligne_congress import MenuPrincipal
+                    menu = MenuPrincipal()
+                    menu.run()
+                else:
+                    from Board.board_complet import SelecteurPlateau
+                    selecteur = SelecteurPlateau()
+                    plateau_final = selecteur.executer()
+                    if plateau_final:
+                        if mode == "Joueur VS IA":
+                            from Jeux.Congress.congress_rules_IA import Plateau_pion
                             jeu = Plateau_pion()
-                            if hasattr(jeu, 'mode'):
-                                jeu.mode = mode
-                            elif hasattr(jeu, 'set_mode'):
-                                jeu.set_mode(mode)
-                        except:
-                            # Essai 3: juste créer l'instance basique
+                        else:
+                            from Jeux.Congress.congress_rules import Plateau_pion
                             jeu = Plateau_pion()
-                    
-                    jeu.run()
-                    
+                        jeu.run()
             except ImportError as e:
                 print("Erreur lors de l'import du jeu Congress:", e)
             except Exception as e:

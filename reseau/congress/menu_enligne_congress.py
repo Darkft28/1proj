@@ -198,6 +198,9 @@ class MenuPrincipal:
             clock.tick(60)
         
         pygame.quit()
+        import subprocess
+        import sys
+        subprocess.Popen([sys.executable, "menu/menu.py"])
         sys.exit()
 
 if __name__ == "__main__":

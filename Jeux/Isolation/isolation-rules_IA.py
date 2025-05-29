@@ -523,3 +523,4 @@ class Plateau_pion:
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
+    

@@ -73,6 +73,15 @@ class Plateau_pion:
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
 
+        # État du jeu
+        self.game_over = False
+        self.gagnant = None
+
+        # Boutons
+        self.bouton_abandonner = None
+        self.bouton_rejouer = None
+        self.bouton_quitter = None
+
     def get_couleur_case(self, ligne, col):
         """Récupère la couleur d'une case depuis le fichier JSON"""
         try:
@@ -132,14 +141,30 @@ class Plateau_pion:
             self.afficher_preview_mouvements()
             self.afficher_plateau()
             self.afficher_pion_selectionne()
-            self.afficher_tour()
+            
+            if not self.game_over:
+                self.afficher_tour()
+                self.afficher_bouton_abandonner()
+            else:
+                self.afficher_fin_de_jeu()
             
             # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.gerer_clic()
+                    x, y = event.pos
+                    if not self.game_over:
+                        if self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
+                            self.game_over = True
+                            self.gagnant = "abandon"
+                        else:
+                            self.gerer_clic()
+                    else:
+                        if self.bouton_rejouer and self.bouton_rejouer.collidepoint(x, y):
+                            self.reinitialiser_jeu()
+                        elif self.bouton_quitter and self.bouton_quitter.collidepoint(x, y):
+                            self.running = False
             
             pygame.display.flip()
         
@@ -228,50 +253,98 @@ class Plateau_pion:
     def afficher_tour(self):
         police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
         joueur_nom = "Joueur 1" if self.joueur_actuel == 1 else "Joueur 2"
-        texte = f"Tour du joueur {joueur_nom}"
+        texte = f"Tour de {joueur_nom}"
         couleur = self.NOIR if self.joueur_actuel == 2 else self.BLANC
         surface_texte = police.render(texte, True, couleur)
         self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 70))
     
+    def afficher_bouton_abandonner(self):
+        largeur_bouton = 220
+        hauteur_bouton = 50
+        x = self.LARGEUR - largeur_bouton - 30
+        y = self.HAUTEUR - hauteur_bouton - 30
+        self.bouton_abandonner = pygame.Rect(x, y, largeur_bouton, hauteur_bouton)
+        police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 25)
+        # Rectangle rouge avec arrondi
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_abandonner, border_radius=20)
+        # Texte centré
+        texte_abandonner = police.render("Abandonner", True, self.BLANC)
+        rect_texte = texte_abandonner.get_rect(center=self.bouton_abandonner.center)
+        self.ecran.blit(texte_abandonner, rect_texte)
+
+    def afficher_fin_de_jeu(self):
+        police_grand = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
+        
+        # Texte principal
+        if self.gagnant == "abandon":
+            texte_principal = "Partie abandonnée"
+        else:
+            texte_principal = f"{self.gagnant} gagne !"
+        
+        surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        self.ecran.blit(surface_principale, (
+            self.LARGEUR // 2 - surface_principale.get_width() // 2,
+            self.HAUTEUR // 2 - 200
+        ))
+
+        # Bouton Rejouer
+        largeur_bouton = 250
+        hauteur_bouton = 60
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+        self.bouton_rejouer = pygame.Rect(
+            self.LARGEUR // 2 - largeur_bouton - 20,
+            self.HAUTEUR // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.BLEU, self.bouton_rejouer, border_radius=20)
+        texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
+        rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
+        self.ecran.blit(texte_rejouer, rect_texte_rejouer)
+
+        # Bouton Quitter
+        self.bouton_quitter = pygame.Rect(
+            self.LARGEUR // 2 + 20,
+            self.HAUTEUR // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_quitter, border_radius=20)
+        texte_quitter = police_bouton.render("Quitter", True, self.BLANC)
+        rect_texte_quitter = texte_quitter.get_rect(center=self.bouton_quitter.center)
+        self.ecran.blit(texte_quitter, rect_texte_quitter)
+
     def gerer_clic(self):
         pos = pygame.mouse.get_pos()
-        
-        # Convertir la position en coordonnées de la grille
         col = (pos[0] - self.OFFSET_X) // self.TAILLE_CASE
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
-        
-        # Vérifier si le clic est dans les limites du plateau
+
         if 0 <= ligne < 8 and 0 <= col < 8:
             if self.pion_selectionne is None:
-                # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
                     self.pion_selectionne = (ligne, col)
-                    # Calculer les mouvements possibles pour ce pion
                     self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
-                    print(f"Pion sélectionné en ({ligne}, {col}). {len(self.mouvements_possibles)} mouvements possibles.")
             else:
-                # Déplacement d'un pion
                 if self.mouvement_valide(self.pion_selectionne, (ligne, col)):
                     self.deplacer_pion(self.pion_selectionne, (ligne, col))
                     self.pion_selectionne = None
-                    self.mouvements_possibles = []  # Effacer la prévisualisation
-                    self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
-                    
-                    # Vérifier si un joueur a gagné
+                    self.mouvements_possibles = []
+                    # Passe au joueur suivant (1 <-> 2)
+                    self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
+                    # Vérifier victoire
                     if self.verifier_victoire(1):
-                        print("Le joueur Blanc a gagné!")
-                        self.running = False
+                        print("Le joueur 1 a gagné!")
+                        self.game_over = True
+                        self.gagnant = "Joueur 1"
                     elif self.verifier_victoire(2):
-                        print("Le joueur Noir a gagné!")
-                        self.running = False
+                        print("Le joueur 2 a gagné!")
+                        self.game_over = True
+                        self.gagnant = "Joueur 2"
                 else:
-                    # Si on clique sur un autre pion du même joueur, le sélectionner
                     if self.plateau[ligne][col] == self.joueur_actuel:
                         self.pion_selectionne = (ligne, col)
                         self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
-                        print(f"Nouveau pion sélectionné en ({ligne}, {col}). {len(self.mouvements_possibles)} mouvements possibles.")
                     else:
-                        # Annuler la sélection si le mouvement est invalide
                         self.pion_selectionne = None
                         self.mouvements_possibles = []
     
@@ -295,7 +368,7 @@ class Plateau_pion:
         if couleur_case == "rouge":  # Tour - mouvement ligne/colonne jusqu'à obstacle ou case rouge
             return self.mouvement_tour(ligne_dep, col_dep, ligne_arr, col_arr)
         elif couleur_case == "bleu":  # Roi - 8 cases adjacentes
-            return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_arr) <= 1
+            return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1
         elif couleur_case == "jaune":  # Fou - mouvement diagonal jusqu'à obstacle ou case jaune
             return self.mouvement_fou(ligne_dep, col_dep, ligne_arr, col_arr)
         elif couleur_case == "vert":  # Cavalier - mouvement en L
@@ -410,8 +483,22 @@ class Plateau_pion:
         # Victoire si tous les pions sont visités
         return len(visites) == len(positions)
 
-
-# Lancement du jeu
+    def reinitialiser_jeu(self):
+        # Remets le plateau et les variables à l'état initial
+        self.plateau = [[0, 2, 0, 1, 2, 0, 1, 0],
+                        [1, 0, 0, 0, 0, 0, 0, 2],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [2, 0, 0, 0, 0, 0, 0, 1],
+                        [1, 0, 0, 0, 0, 0, 0, 2],
+                        [0, 0, 0, 0, 0, 0, 0, 0],
+                        [2, 0, 0, 0, 0, 0, 0, 1],
+                        [0, 1, 0, 2, 1, 0, 2, 0]]
+        self.pion_selectionne = None
+        self.mouvements_possibles = []
+        self.joueur_actuel = 1
+        self.game_over = False
+        self.gagnant = None
+        
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
