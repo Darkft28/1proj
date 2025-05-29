@@ -2,6 +2,7 @@ import pygame
 import json
 import os
 import sys
+from menu.config import get_theme
 
 class SelecteurPlateau:
     def __init__(self):
@@ -16,6 +17,13 @@ class SelecteurPlateau:
         # Calcul des ratios d'échelle basé sur 2560x1440
         self.RATIO_X = self.LARGEUR / 2560
         self.RATIO_Y = self.HAUTEUR / 1440
+        
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
+        self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
         
         # Variables de pagination
         self.page_courante = 0
@@ -87,7 +95,7 @@ class SelecteurPlateau:
         self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
 
     def dessiner_ecran_selection(self):
-        self.ecran.fill(self.NOIR)
+        self.ecran.blit(self.background_image, (0, 0))
         
         # Titre
         police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
@@ -222,7 +230,7 @@ class SelecteurPlateau:
         return retour_rect, None
 
     def afficher_ecran_final(self, plateaux_selectionnes):
-        self.ecran.fill(self.NOIR)
+        self.ecran.blit(self.background_image, (0, 0))
         
         # Dimensions du plateau central (2x2) - Augmenté de 75%
         taille_plateau_central = int(1050 * min(self.RATIO_X, self.RATIO_Y))  # 600 * 1.75
