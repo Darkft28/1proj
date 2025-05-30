@@ -85,7 +85,8 @@ class Plateau_pion:
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
-          # État du jeu
+        
+        # État du jeu
         self.game_over = False
         self.gagnant = None
         
@@ -201,14 +202,15 @@ class Plateau_pion:
                 while 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
                     # S'arrêter si case occupée ou première case rouge rencontrée                    
-                if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
+                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
                         break
-                nl, nc = nl + dl, nc + dc
+                    nl, nc = nl + dl, nc + dc
+                    
         return cases_bloquees
     
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -330,16 +332,16 @@ class Plateau_pion:
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
                     x, y = event.pos
-                    if self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
+                    if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
                         self.game_over = True
                         self.gagnant = "abandon"
                     else:
                         self.gerer_clic()
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.game_over:
                     x, y = event.pos
-                    if self.bouton_rejouer.collidepoint(x, y):
+                    if hasattr(self, 'bouton_rejouer') and self.bouton_rejouer.collidepoint(x, y):
                         self.reinitialiser_jeu()
-                    elif self.bouton_quitter.collidepoint(x, y):
+                    elif hasattr(self, 'bouton_quitter') and self.bouton_quitter.collidepoint(x, y):
                         self.running = False
             pygame.display.flip()
         
@@ -354,7 +356,7 @@ class Plateau_pion:
 
     def dessiner_plateau(self):
         try:
-            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici aussi
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -410,7 +412,7 @@ class Plateau_pion:
                 if self.cases_bloquees[i][j]:
                     # Crée une surface semi-transparente grise
                     surf = pygame.Surface((self.TAILLE_CASE, self.TAILLE_CASE), pygame.SRCALPHA)
-                    surf.fill((100, 100, 100, 235))  # Gris avec alpha (120/255)
+                    surf.fill((100, 100, 100, 235))  # Gris avec alpha (235/255)
                     self.ecran.blit(
                         surf,
                         (self.OFFSET_X + j * self.TAILLE_CASE, self.OFFSET_Y + i * self.TAILLE_CASE)
@@ -496,7 +498,7 @@ class Plateau_pion:
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2 - -450,
+            self.HAUTEUR // 2 + 450,
             largeur_bouton,
             hauteur_bouton
         )
@@ -508,7 +510,7 @@ class Plateau_pion:
         # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2 - -450,
+            self.HAUTEUR // 2 + 450,
             largeur_bouton,
             hauteur_bouton
         )
@@ -530,7 +532,6 @@ class Plateau_pion:
         
         # Vérifier si le clic est dans les limites du plateau
         if 0 <= ligne < 8 and 0 <= col < 8:
-            
             # Tenter de placer un pion
             if self.placer_pion(ligne, col, self.joueur_actuel):
                 # En mode réseau, envoyer le mouvement
@@ -553,8 +554,8 @@ class Plateau_pion:
                             self.gagnant = "Adversaire"
                             self.envoyer_message(f"VICTOIRE:{adversaire}")
 
+
 # Lancement du jeu
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
-    
