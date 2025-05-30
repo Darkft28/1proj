@@ -103,7 +103,6 @@ class Menu:
             self.ecran.blit(texte, rect_texte)
             
             
-    
     def executer(self):
         en_cours = True
         while en_cours:
