@@ -1,4 +1,3 @@
-# filepath: c:\Users\robin\Desktop\supinfo\1proj\1proj\menu\menu_mode.py
 import pygame
 import sys
 import os
@@ -148,13 +147,20 @@ class MenuMode:
             print(f"❌ Erreur lors de la génération du plateau Katarenga: {e}")
 
     def lancer_jeu(self, mode):
-        if self.jeu == "Congress":
+        if mode == "En ligne":
+            # Utiliser le gestionnaire réseau unifié pour tous les jeux
             try:
-                if mode == "En ligne":
-                    from reseau.congress.menu_enligne_congress import MenuPrincipal
-                    menu = MenuPrincipal()
-                    menu.run()
-                else:
+                from .network_manager import NetworkManager
+                manager = NetworkManager(self.jeu)
+                manager.executer()
+            except ImportError as e:
+                print("Erreur lors de l'import du gestionnaire réseau:", e)
+            except Exception as e:
+                print(f"Erreur lors du lancement du mode réseau: {e}")
+        else:
+            # Mode local (Joueur VS Joueur ou Joueur VS IA)
+            if self.jeu == "Congress":
+                try:
                     from Board.board_complet import SelecteurPlateau
                     selecteur = SelecteurPlateau()
                     plateau_final = selecteur.executer()
@@ -166,17 +172,13 @@ class MenuMode:
                             from Jeux.Congress.congress_rules import Plateau_pion
                             jeu = Plateau_pion()
                         jeu.run()
-            except ImportError as e:
-                print("Erreur lors de l'import du jeu Congress:", e)
-            except Exception as e:
-                print(f"Erreur lors du lancement de Congress: {e}")
-        elif self.jeu == "Katarenga":
-            try:
-                if mode == "En ligne":
-                    from reseau.Katarenga.menu_principal import MenuPrincipal
-                    menu = MenuPrincipal()
-                    menu.run()
-                else:
+                except ImportError as e:
+                    print("Erreur lors de l'import du jeu Congress:", e)
+                except Exception as e:
+                    print(f"Erreur lors du lancement de Congress: {e}")
+                    
+            elif self.jeu == "Katarenga":
+                try:
                     from Board.board_complet import SelecteurPlateau
                     selecteur = SelecteurPlateau()
                     plateau_final = selecteur.executer()
@@ -192,18 +194,13 @@ class MenuMode:
                             from Jeux.Katarenga.katarenga_rules import Plateau_pion
                             jeu = Plateau_pion()
                             jeu.run()
-            except ImportError as e:
-                print("Erreur lors de l'import du jeu Katarenga:", e)
-            except Exception as e:
-                print(f"Erreur lors du lancement de Katarenga: {e}")
-                
-        elif self.jeu == "Isolation":
-            try:
-                if mode == "En ligne":
-                    from reseau.Isolation.menu_principal import MenuPrincipal
-                    menu = MenuPrincipal()
-                    menu.run()
-                else:
+                except ImportError as e:
+                    print("Erreur lors de l'import du jeu Katarenga:", e)
+                except Exception as e:
+                    print(f"Erreur lors du lancement de Katarenga: {e}")
+                    
+            elif self.jeu == "Isolation":
+                try:
                     from Board.board_complet import SelecteurPlateau
                     selecteur = SelecteurPlateau()
                     plateau_final = selecteur.executer()
@@ -215,11 +212,10 @@ class MenuMode:
                             from Jeux.Isolation.isolation_rules import Plateau_pion
                             jeu = Plateau_pion()
                         jeu.run()
-            except ImportError as e:
-                print("Erreur lors de l'import du jeu Isolation:", e)
-            except Exception as e:
-                print(f"Erreur lors du lancement d'Isolation: {e}")
-
+                except ImportError as e:
+                    print("Erreur lors de l'import du jeu Isolation:", e)
+                except Exception as e:
+                    print(f"Erreur lors du lancement d'Isolation: {e}")
 
 if __name__ == "__main__":
     # Test avec Congress par défaut
