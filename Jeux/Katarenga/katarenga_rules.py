@@ -166,6 +166,7 @@ class Plateau_pion:
                         if self.bouton_rejouer.collidepoint(x, y):
                             self.reinitialiser_jeu()
                         elif self.bouton_quitter.collidepoint(x, y):
+                            self.running = False
                             pygame.quit()
                             from menu.menu import Menu
                             menu = Menu()
@@ -314,6 +315,15 @@ class Plateau_pion:
         rect_texte_quitter = texte_quitter.get_rect(center=self.bouton_quitter.center)
         self.ecran.blit(texte_quitter, rect_texte_quitter)
 
+    def afficher_preview_mouvements(self):
+        """Affiche des cercles noirs pour les mouvements possibles du pion sélectionné"""
+        if self.pion_selectionne and self.mouvements_possibles:
+            rayon = self.TAILLE_CASE // 4
+            for ligne, col in self.mouvements_possibles:
+                centre_x = self.OFFSET_X + col * self.TAILLE_CASE + self.TAILLE_CASE // 2
+                centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
+                pygame.draw.circle(self.ecran, self.NOIR, (centre_x, centre_y), rayon)
+
     def gerer_clic(self):
         pos = pygame.mouse.get_pos()
         
@@ -405,9 +415,12 @@ class Plateau_pion:
             # Vérifier si les indices sont dans les limites du plateau 10x10
             if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
                 return False
-                
+
             image_path = plateau_images[ligne_dep][col_dep]
-            
+            image_dest = plateau_images[ligne_arr][col_arr]
+            if "marron" in image_dest.lower():
+                return False
+
             if "rouge" in image_path.lower():
                 if not (ligne_arr == ligne_dep or col_arr == col_dep) or (ligne_arr == ligne_dep and col_arr == col_dep):
                     return False
@@ -544,5 +557,4 @@ class Plateau_pion:
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
-    
-print
+
