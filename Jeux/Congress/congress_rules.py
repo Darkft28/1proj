@@ -85,35 +85,34 @@ class Plateau_pion:
         # Boutons
         self.bouton_abandonner = None
         self.bouton_rejouer = None
-        self.bouton_quitter = None
-
-    def get_couleur_case(self, ligne, col):
-        """Récupère la couleur d'une case depuis le fichier JSON"""
-        try:
-            with open("plateaux/plateau_finale.json", 'r') as f:
-                plateau_images = json.load(f)
-            
-            # Vérifier si les indices sont dans les limites du plateau
-            if ligne >= len(plateau_images) or col >= len(plateau_images[0]):
-                return None
+        self.bouton_quitter = None    
+        def get_couleur_case(self, ligne, col):
+            """Récupère la couleur d'une case depuis le fichier JSON"""
+            try:
+                with open("plateau_final/plateau_finale.json", 'r') as f:
+                    plateau_images = json.load(f)
                 
-            image_path = plateau_images[ligne][col]
-            
-            # Déterminer la couleur selon le nom de fichier
-            if "rouge" in image_path.lower():
-                return "rouge"
-            elif "bleu" in image_path.lower():
-                return "bleu"
-            elif "jaune" in image_path.lower():
-                return "jaune"
-            elif "vert" in image_path.lower():
-                return "vert"
-            else:
-                return None
+                # Vérifier si les indices sont dans les limites du plateau
+                if ligne >= len(plateau_images) or col >= len(plateau_images[0]):
+                    return None
+                    
+                image_path = plateau_images[ligne][col]
                 
-        except Exception as e:
-            print(f"Erreur lors de la détection de couleur: {e}")
-            return None
+                # Déterminer la couleur selon le nom de fichier
+                if "rouge" in image_path.lower():
+                    return "rouge"
+                elif "bleu" in image_path.lower():
+                    return "bleu"
+                elif "jaune" in image_path.lower():
+                    return "jaune"
+                elif "vert" in image_path.lower():
+                    return "vert"
+                else:
+                    return None
+                    
+            except Exception as e:
+                print(f"Erreur lors de la détection de couleur: {e}")
+                return None
 
     def get_mouvements_possibles(self, ligne, col):
         """Retourne la liste des mouvements possibles pour un pion à la position donnée"""
@@ -192,11 +191,10 @@ class Plateau_pion:
             centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
             rayon = int(self.TAILLE_CASE * 0.42)
             pygame.draw.circle(self.ecran, self.VERT, (centre_x, centre_y), rayon, 5)
-    
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte

@@ -128,12 +128,11 @@ class Plateau_pion:
                     if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
                         break
                     nl, nc = nl + dl, nc + dc
-                    
         return cases_bloquees
-
+    
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici
+            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -311,14 +310,13 @@ class Plateau_pion:
     def reinitialiser_jeu(self):
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
         self.cases_bloquees = [[False for _ in range(8)] for _ in range(8)]
-        self.joueur_actuel = self.joueur_humain  # Le joueur humain commence toujours
-        self.game_over = False
+        self.joueur_actuel = self.joueur_humain  # Le joueur humain commence toujours        self.game_over = False
         self.gagnant = None
         self.temps_derniere_action = pygame.time.get_ticks()
 
     def dessiner_plateau(self):
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici aussi
+            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici aussi
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire

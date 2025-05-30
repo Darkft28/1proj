@@ -1,6 +1,8 @@
 import pygame
 import sys
 import json
+from menu.config import get_theme
+
 class Plateau_pion:
     def __init__(self):
         pygame.init()
@@ -20,13 +22,17 @@ class Plateau_pion:
         self.ecran = pygame.display.set_mode((self.LARGEUR, self.HAUTEUR))
         pygame.display.set_caption("Katarenga")
         
-        # Taille des cases
+        # Taille des cases pour plateau 10x10
         self.TAILLE_CASE = int(100 * self.RATIO_X)
-        self.OFFSET_X = (self.LARGEUR - 8 * self.TAILLE_CASE) // 2
-        self.OFFSET_Y = (self.HAUTEUR - 8 * self.TAILLE_CASE) // 2
+        self.OFFSET_X = (self.LARGEUR - 10 * self.TAILLE_CASE) // 2
+        self.OFFSET_Y = (self.HAUTEUR - 10 * self.TAILLE_CASE) // 2
         
         # Fond d'écran
-        self.background_image = pygame.image.load("assets/menu-claire/fond-menu-principal.png")
+        theme = get_theme()
+        if theme == "Sombre":
+            self.background_image = pygame.image.load("assets/menu/menu-sombre.png")
+        else:
+            self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
         # Couleurs
@@ -36,6 +42,7 @@ class Plateau_pion:
         self.BLEU = (29, 185, 242)
         self.JAUNE = (235, 226, 56)
         self.VERT = (24, 181, 87)
+        self.GRIS = (128, 128, 128)
 
         self.images = {}
         try:
@@ -49,19 +56,20 @@ class Plateau_pion:
                 self.images[couleur] = pygame.image.load(path).convert_alpha()
         except pygame.error as e:
             print(f"Erreur lors du chargement des images: {e}")
-            sys.exit(1)
 
         # Bords et coins
         self.BORDURE = "assets/bordure.png"
         self.COINS = "assets/coin.png"
-        #pions
-        self.pion_blanc = pygame.image.load("assets/pion_blanc.png")
-        self.pion_noir = pygame.image.load("assets/pion_noir.png")
-
         
+        # Pions
+        try:
+            self.pion_blanc = pygame.image.load("assets/pion_blanc.png")
+            self.pion_noir = pygame.image.load("assets/pion_noir.png")
+        except:
+            self.pion_blanc = None
+            self.pion_noir = None
 
-
-        #plateau de pions
+        # Plateau de pions initial (10x10 avec bordures)
         self.plateau = [[3, 10, 10, 10, 10, 10, 10, 10, 10, 3],
                         [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
@@ -78,19 +86,24 @@ class Plateau_pion:
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
 
-        
-    def run(self):
-        
-        
-        # Redimensionner les pions
-        self.pion_blanc = pygame.transform.scale(self.pion_blanc, (self.TAILLE_CASE, self.TAILLE_CASE))
-        self.pion_noir = pygame.transform.scale(self.pion_noir, (self.TAILLE_CASE, self.TAILLE_CASE))
+        # État du jeu
+        self.game_over = False
+        self.gagnant = None
         
         # Variables de jeu
         self.joueur_actuel = 1  # 1 pour blanc, 2 pour noir
         self.pion_selectionne = None
+        self.mouvements_possibles = []
         self.running = True
-        self.transformer_plateau()
+
+    def run(self):
+        # Redimensionner les pions
+        if self.pion_blanc and self.pion_noir:
+            pion_size = int(self.TAILLE_CASE * 0.8)
+            offset = (self.TAILLE_CASE - pion_size) // 2
+            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
+            self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
+        
         # Boucle de jeu
         while self.running:
             self.ecran.blit(self.background_image, (0, 0))
@@ -99,66 +112,54 @@ class Plateau_pion:
             self.dessiner_plateau()
             self.afficher_plateau()
             
-            # Afficher le tour du joueur
-            self.afficher_tour()
+            if not self.game_over:
+                self.afficher_tour()
+                self.afficher_bouton_abandonner()
+            else:
+                self.afficher_fin_de_jeu()
             
             # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
-                    self.gerer_clic()
+                    x, y = event.pos
+                    if not self.game_over:
+                        if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
+                            self.game_over = True
+                            self.gagnant = "abandon"
+                        else:
+                            self.gerer_clic()
+                    else:
+                        if hasattr(self, 'bouton_rejouer') and self.bouton_rejouer.collidepoint(x, y):
+                            self.reinitialiser_jeu()
+                        elif hasattr(self, 'bouton_quitter') and self.bouton_quitter.collidepoint(x, y):
+                            self.running = False
             
             pygame.display.flip()
         
         pygame.quit()
 
-    def transformer_plateau(self):
-        # Charger le fichier JSON contenant les chemins d'images
-        try:
-            with open("plateaux/plateau_katarenga.json", 'r') as f:
-                plateau_8 = json.load(f)
-                
-                plateau_8.insert(0, [self.BORDURE for _ in range(8)])
-                
-                plateau_8.append([self.BORDURE for _ in range(8)])
-
-                for row in plateau_8:
-                    row.insert(0, self.BORDURE)
-                    row.append(self.BORDURE)
-
-                #Coins
-                plateau_8[0][0] = self.COINS
-                plateau_8[0][9] = self.COINS
-                plateau_8[9][0] = self.COINS
-                plateau_8[9][9] = self.COINS
-                
-                with open("plateaux/plateau_katarenga.json", 'w') as fw:
-                    json.dump(plateau_8, fw, indent=2)
-                fw.close()
-            f.close()
-
-
-        except Exception as e:
-            print(f"Erreur lors du chargement du plateau: {e}")
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_katarenga.json", 'r') as f:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
-            # Si le plateau JSON n'est pas de taille 8x8, on l'adapte
-            if len(plateau_images) < 8 or len(plateau_images[0]) < 8:
-                # Répéter les motifs pour atteindre 8x8
-                plateau_complet = []
-                for i in range(8):
-                    ligne = []
-                    for j in range(8):
-                        ligne.append(plateau_images[i % len(plateau_images)][j % len(plateau_images[0])])
-                    plateau_complet.append(ligne)
-                plateau_images = plateau_complet
+            # Vérifier que le plateau est 10x10
+            if len(plateau_images) != 10 or len(plateau_images[0]) != 10:
+                print(f"Erreur: Le plateau devrait être 10x10, mais il est {len(plateau_images)}x{len(plateau_images[0])}")
+                # Fallback: dessiner un damier basique 10x10
+                for i in range(10):
+                    for j in range(10):
+                        couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
+                        pygame.draw.rect(self.ecran, couleur, 
+                                       (self.OFFSET_X + j * self.TAILLE_CASE, 
+                                        self.OFFSET_Y + i * self.TAILLE_CASE, 
+                                        self.TAILLE_CASE, self.TAILLE_CASE))
+                return
 
-            # Dessiner les images du plateau
+            # Dessiner les images du plateau 10x10
             for i in range(10):
                 for j in range(10):
                     image_path = plateau_images[i][j]
@@ -180,65 +181,134 @@ class Plateau_pion:
 
         except Exception as e:
             print(f"Erreur lors du chargement du plateau: {e}")
-            # Fallback: dessiner un damier basique
-            for i in range(8):
-                for j in range(8):
+            # Fallback: dessiner un damier basique 10x10
+            for i in range(10):
+                for j in range(10):
                     couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
                     pygame.draw.rect(self.ecran, couleur, 
                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
                                     self.OFFSET_Y + i * self.TAILLE_CASE, 
                                     self.TAILLE_CASE, self.TAILLE_CASE))
-    
+
     def afficher_plateau(self):
-        for i in range(1, 9):
-            for j in range(1, 9):
+        if not self.pion_blanc or not self.pion_noir:
+            return
+            
+        offset = (self.TAILLE_CASE - int(self.TAILLE_CASE * 0.8)) // 2
+        for i in range(10):
+            for j in range(10):
                 if self.plateau[i][j] == 1:
                     self.ecran.blit(self.pion_blanc, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE))
+                                    (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                                    self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                 elif self.plateau[i][j] == 2:
                     self.ecran.blit(self.pion_noir, 
-                                    (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                    self.OFFSET_Y + i * self.TAILLE_CASE))
-    
+                                    (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                                    self.OFFSET_Y + i * self.TAILLE_CASE + offset))
+
     def afficher_tour(self):
-        font = pygame.font.Font(None, 36)
+        font = pygame.font.Font(self.font_path, int(36 * self.RATIO_Y)) if self.font_path else pygame.font.Font(None, int(36 * self.RATIO_Y))
         texte = f"Tour du joueur {'Blanc' if self.joueur_actuel == 1 else 'Noir'}"
         couleur = self.BLANC if self.joueur_actuel == 1 else self.NOIR
         surface_texte = font.render(texte, True, couleur)
-        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 20))
-    
+        self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, int(20 * self.RATIO_Y)))
+
+    def afficher_bouton_abandonner(self):
+        # Bouton Abandonner
+        police_bouton = pygame.font.Font(self.font_path, int(24 * self.RATIO_Y)) if self.font_path else pygame.font.Font(None, int(24 * self.RATIO_Y))
+        self.bouton_abandonner = pygame.Rect(
+            int(20 * self.RATIO_X),
+            int(20 * self.RATIO_Y),
+            int(150 * self.RATIO_X),
+            int(50 * self.RATIO_Y)
+        )
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_abandonner, border_radius=20)
+        texte_abandonner = police_bouton.render("Abandonner", True, self.BLANC)
+        rect_texte_abandonner = texte_abandonner.get_rect(center=self.bouton_abandonner.center)
+        self.ecran.blit(texte_abandonner, rect_texte_abandonner)
+
+    def afficher_fin_de_jeu(self):
+        police_grand = pygame.font.Font(self.font_path, int(40 * self.RATIO_Y)) if self.font_path else pygame.font.Font(None, int(40 * self.RATIO_Y))
+        
+        # Texte principal
+        if self.gagnant == "abandon":
+            texte_principal = "Partie abandonnée"
+        else:
+            texte_principal = f"{self.gagnant} gagne !"
+        
+        surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        self.ecran.blit(surface_principale, (
+            self.LARGEUR // 2 - surface_principale.get_width() // 2,
+            self.HAUTEUR // 2 - int(200 * self.RATIO_Y)
+        ))
+
+        # Boutons
+        largeur_bouton = int(250 * self.RATIO_X)
+        hauteur_bouton = int(60 * self.RATIO_Y)
+        police_bouton = pygame.font.Font(self.font_path, int(32 * self.RATIO_Y)) if self.font_path else pygame.font.Font(None, int(32 * self.RATIO_Y))
+        
+        # Bouton Rejouer
+        self.bouton_rejouer = pygame.Rect(
+            self.LARGEUR // 2 - largeur_bouton - int(20 * self.RATIO_X),
+            self.HAUTEUR // 2 - hauteur_bouton // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.VERT, self.bouton_rejouer, border_radius=20)
+        texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
+        rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
+        self.ecran.blit(texte_rejouer, rect_texte_rejouer)
+
+        # Bouton Quitter
+        self.bouton_quitter = pygame.Rect(
+            self.LARGEUR // 2 + int(20 * self.RATIO_X),
+            self.HAUTEUR // 2 - hauteur_bouton // 2,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_quitter, border_radius=20)
+        texte_quitter = police_bouton.render("Quitter", True, self.BLANC)
+        rect_texte_quitter = texte_quitter.get_rect(center=self.bouton_quitter.center)
+        self.ecran.blit(texte_quitter, rect_texte_quitter)
+
     def gerer_clic(self):
         pos = pygame.mouse.get_pos()
         
-        # Convertir la position en coordonnées de la grille
+        # Convertir la position en coordonnées de la grille 10x10
         col = (pos[0] - self.OFFSET_X) // self.TAILLE_CASE
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
         
         # Vérifier si le clic est dans les limites du plateau
-        if 0 <= ligne < 9 and 0 <= col < 9:
+        if 0 <= ligne < 10 and 0 <= col < 10:
             if self.pion_selectionne is None:
                 # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
                     self.pion_selectionne = (ligne, col)
+                    self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
             else:
                 # Déplacement d'un pion
                 if self.mouvement_valide(self.pion_selectionne, (ligne, col)):
                     self.deplacer_pion(self.pion_selectionne, (ligne, col))
                     self.pion_selectionne = None
+                    self.mouvements_possibles = []
                     self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
                     
                     # Vérifier si un joueur a gagné
                     if self.verifier_victoire(1):
-                        print("Le joueur Blanc a gagné!")
-                        self.running = False
+                        self.game_over = True
+                        self.gagnant = "Joueur Blanc"
                     elif self.verifier_victoire(2):
-                        print("Le joueur Noir a gagné!")
-                        self.running = False
+                        self.game_over = True
+                        self.gagnant = "Joueur Noir"
                 else:
                     # Annuler la sélection si le mouvement est invalide
                     self.pion_selectionne = None
-    
+                    self.mouvements_possibles = []
+
+    def get_mouvements_possibles(self, ligne, col):
+        # TODO: Implémenter la logique pour obtenir tous les mouvements possibles
+        return []
+
     def mouvement_valide(self, depart, arrivee):
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
@@ -254,21 +324,21 @@ class Plateau_pion:
         # Cas spécial : pion sur la ligne adverse (ligne d'entrée de base)
         pion_sur_ligne_adverse = False
         if (self.joueur_actuel == 1 and ligne_dep == 1) or \
-        (self.joueur_actuel == 2 and ligne_dep == 8):
+           (self.joueur_actuel == 2 and ligne_dep == 8):
             pion_sur_ligne_adverse = True
             
             # Si le pion est sur la ligne adverse, il peut aller dans un camp adverse
             # sans contraintes de mouvement (déplacement libre)
             if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
-            (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+               (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
                 print(f"Le joueur {self.joueur_actuel} entre dans un camp adverse!")
                 return True
         
         try:
-            with open("plateaux/plateau_katarenga.json", 'r') as f:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
-            # Vérifier si les indices sont dans les limites du plateau
+            # Vérifier si les indices sont dans les limites du plateau 10x10
             if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
                 return False
                 
@@ -286,7 +356,7 @@ class Plateau_pion:
             elif "vert" in image_path.lower():
                 # Mouvement de cavalier
                 return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or \
-                    (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
+                       (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2)
             else:
                 # Mouvement libre pour les autres cases
                 return True
@@ -294,7 +364,7 @@ class Plateau_pion:
         except Exception as e:
             print(f"Erreur lors de la vérification des règles de mouvement: {e}")
             return False
-    
+
     def deplacer_pion(self, depart, arrivee):
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
@@ -302,7 +372,7 @@ class Plateau_pion:
         # Vérifier si le pion va dans un camp adverse
         pion_entre_dans_camp = False
         if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
-        (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+           (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
             pion_entre_dans_camp = True
             print(f"Le pion du joueur {self.joueur_actuel} entre définitivement dans le camp adverse!")
         
@@ -323,15 +393,35 @@ class Plateau_pion:
     def verifier_victoire(self, joueur):
         # Trouver tous les pions du joueur
         positions = []
-        for i in range(8):
-            for j in range(8):
+        for i in range(10):
+            for j in range(10):
                 if self.plateau[i][j] == joueur:
                     positions.append((i, j))
         
         # Si aucun pion, pas de victoire
         if not positions:
             return False
+        
+        # TODO: Implémenter la logique de victoire complète
+        return False
 
+    def reinitialiser_jeu(self):
+        # Remettre le plateau et les variables à l'état initial
+        self.plateau = [[3, 10, 10, 10, 10, 10, 10, 10, 10, 3],
+                        [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 1, 1, 1, 1, 1, 1, 1, 1, 10],
+                        [4, 10, 10, 10, 10, 10, 10, 10, 10, 4]]
+        self.pion_selectionne = None
+        self.mouvements_possibles = []
+        self.joueur_actuel = 1
+        self.game_over = False
+        self.gagnant = None
 
 # Lancement du jeu
 if __name__ == "__main__":
