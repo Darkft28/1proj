@@ -487,18 +487,26 @@ class Plateau_pion:
         gagnant_nom = "Joueur 2" if self.joueur_actuel == 1 else "Joueur 1"
         texte_principal = f"{gagnant_nom} gagne !"
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        
+        # Message de victoire au-dessus du plateau
+        message_y = self.OFFSET_Y - 80
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 500
+            message_y
         ))
 
-        # Bouton Rejouer
+        # Boutons en dessous du plateau
         largeur_bouton = 250
         hauteur_bouton = 60
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+        
+        # Position Y des boutons sous le plateau
+        boutons_y = self.OFFSET_Y + (8 * self.TAILLE_CASE) + 30
+        
+        # Bouton Rejouer
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2 + 450,
+            boutons_y,
             largeur_bouton,
             hauteur_bouton
         )
@@ -510,7 +518,7 @@ class Plateau_pion:
         # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2 + 450,
+            boutons_y,
             largeur_bouton,
             hauteur_bouton
         )
