@@ -302,15 +302,15 @@ class Plateau_pion:
             cases_legales = self.get_cases_legales()
             for ligne, col in cases_legales:
                 # Dessiner un contour vert épais pour indiquer les cases légales
-                pygame.draw.rect(self.ecran, self.VERT, 
-                               (self.OFFSET_X + col * self.TAILLE_CASE, 
+                pygame.draw.rect(self.ecran, self.VERT,                               (self.OFFSET_X + col * self.TAILLE_CASE, 
                                 self.OFFSET_Y + ligne * self.TAILLE_CASE, 
                                 self.TAILLE_CASE, self.TAILLE_CASE), 4)
 
     def reinitialiser_jeu(self):
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
         self.cases_bloquees = [[False for _ in range(8)] for _ in range(8)]
-        self.joueur_actuel = self.joueur_humain  # Le joueur humain commence toujours        self.game_over = False
+        self.joueur_actuel = self.joueur_humain  # Le joueur humain commence toujours
+        self.game_over = False
         self.gagnant = None
         self.temps_derniere_action = pygame.time.get_ticks()
 
@@ -456,18 +456,24 @@ class Plateau_pion:
             texte_principal = "Vous gagnez !"
             
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        
+        # Message de victoire au-dessus du plateau
+        message_y = self.OFFSET_Y - 80
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 500
-        ))
-
-        # Bouton Rejouer
+            message_y
+        ))        # Boutons en dessous du plateau
         largeur_bouton = 250
         hauteur_bouton = 60
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+        
+        # Position Y des boutons sous le plateau
+        boutons_y = self.OFFSET_Y + (8 * self.TAILLE_CASE) + 30
+        
+        # Bouton Rejouer
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2 - -450,
+            boutons_y,
             largeur_bouton,
             hauteur_bouton
         )
@@ -479,7 +485,7 @@ class Plateau_pion:
         # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2 - -450,
+            boutons_y,
             largeur_bouton,
             hauteur_bouton
         )
