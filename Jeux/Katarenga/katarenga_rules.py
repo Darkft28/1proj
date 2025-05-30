@@ -1,12 +1,20 @@
 import pygame
 import sys
 import json
+import socket
+import threading
 from menu.config import get_theme
 
 
 class Plateau_pion:
-    def __init__(self):
+    def __init__(self, mode_reseau=None, socket_reseau=None, mon_numero=None, connexion_etablie=False):
         pygame.init()
+        
+        # Paramètres réseau
+        self.mode_reseau = mode_reseau  # None, "host", ou "guest"
+        self.socket_reseau = socket_reseau
+        self.mon_numero = mon_numero  # 1 ou 2
+        self.connexion_etablie = connexion_etablie
         
         self.font_path = 'assets/police-gloomie_saturday/Gloomie Saturday.otf'
         
@@ -114,6 +122,12 @@ class Plateau_pion:
             self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
             self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
         
+        # Démarrer le thread de réception des messages réseau si nécessaire
+        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+            thread_recevoir = threading.Thread(target=self.recevoir_messages_reseau)
+            thread_recevoir.daemon = True
+            thread_recevoir.start()
+        
         # Boucle de jeu
         while self.running:
             self.ecran.blit(self.background_image, (0, 0))
@@ -130,15 +144,24 @@ class Plateau_pion:
             # Gestion des événements
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    if self.mode_reseau and self.socket_reseau:
+                        self.envoyer_message("ABANDON")
                     self.running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     x, y = event.pos
                     if not self.game_over:
                         if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
+                            if self.mode_reseau and self.socket_reseau:
+                                self.envoyer_message("ABANDON")
                             self.game_over = True
                             self.gagnant = "abandon"
                         else:
-                            self.gerer_clic()
+                            # En mode réseau, vérifier si c'est notre tour
+                            if self.mode_reseau:
+                                if self.joueur_actuel == self.mon_numero:
+                                    self.gerer_clic()
+                            else:
+                                self.gerer_clic()
                     else:
                         if self.bouton_rejouer.collidepoint(x, y):
                             self.reinitialiser_jeu()
@@ -150,6 +173,13 @@ class Plateau_pion:
                             return
         
             pygame.display.flip()
+        
+        # Fermer la connexion réseau si active
+        if self.mode_reseau and self.socket_reseau:
+            try:
+                self.socket_reseau.close()
+            except:
+                pass
         
         pygame.quit()
 
@@ -272,7 +302,7 @@ class Plateau_pion:
         rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
         self.ecran.blit(texte_rejouer, rect_texte_rejouer)
 
-        # Bouton Quitter (rouge)
+        # Bouton Quitter
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
             y_boutons,
@@ -305,21 +335,18 @@ class Plateau_pion:
             else:
                 # Déplacement d'un pion
                 if self.mouvement_valide(self.pion_selectionne, (ligne, col)):
-                    if self.deplacer_pion(self.pion_selectionne, (ligne, col)):
-                        self.pion_selectionne = None
-                        self.mouvements_possibles = []
-                        self.joueur_actuel = 3 - self.joueur_actuel
-                        # Vérifier si un joueur a gagné
-                        if self.verifier_victoire(1):
-                            self.game_over = True
-                            self.gagnant = "Joueur Blanc"
-                        elif self.verifier_victoire(2):
-                            self.game_over = True
-                            self.gagnant = "Joueur Noir"
-                    else:
-                        # Mouvement refusé (ex: capture interdite)
-                        self.pion_selectionne = None
-                        self.mouvements_possibles = []
+                    self.deplacer_pion(self.pion_selectionne, (ligne, col))
+                    self.pion_selectionne = None
+                    self.mouvements_possibles = []
+                    self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
+                    
+                    # Vérifier si un joueur a gagné
+                    if self.verifier_victoire(1):
+                        self.game_over = True
+                        self.gagnant = "Joueur Blanc"
+                    elif self.verifier_victoire(2):
+                        self.game_over = True
+                        self.gagnant = "Joueur Noir"
                 else:
                     # Annuler la sélection si le mouvement est invalide
                     self.pion_selectionne = None
@@ -512,17 +539,8 @@ class Plateau_pion:
         self.joueur_actuel = 1
         self.game_over = False
         self.gagnant = None
-        self.tour += 1
 
-    def afficher_preview_mouvements(self):
-        """Affiche des cercles noirs pour les mouvements possibles du pion sélectionné"""
-        if self.pion_selectionne and self.mouvements_possibles:
-            rayon = self.TAILLE_CASE // 4  # Ajuste la taille si besoin
-            for ligne, col in self.mouvements_possibles:
-                centre_x = self.OFFSET_X + col * self.TAILLE_CASE + self.TAILLE_CASE // 2
-                centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
-                pygame.draw.circle(self.ecran, self.NOIR, (centre_x, centre_y), rayon)
-
+# Lancement du jeu
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()

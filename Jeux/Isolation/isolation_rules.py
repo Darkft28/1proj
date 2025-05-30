@@ -1,12 +1,20 @@
 import pygame
 import sys
 import json
+import socket
+import threading
 from menu.config import get_theme
 
 
 class Plateau_pion:
-    def __init__(self):
+    def __init__(self, mode_reseau=None, socket_reseau=None, mon_numero=None, connexion_etablie=False):
         pygame.init()
+        
+        # Paramètres réseau
+        self.mode_reseau = mode_reseau  # None, "host", ou "guest"
+        self.socket_reseau = socket_reseau
+        self.mon_numero = mon_numero  # 1 ou 2
+        self.connexion_etablie = connexion_etablie
         
         self.font_path = pygame.font.match_font('assets/police-gloomie_saturday/Gloomie Saturday.otf')
         
@@ -77,10 +85,57 @@ class Plateau_pion:
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
-        
-        # État du jeu
+          # État du jeu
         self.game_over = False
         self.gagnant = None
+        
+        # Initialiser le joueur actuel
+        self.joueur_actuel = 1
+
+    def recevoir_messages_reseau(self):
+        """Thread pour recevoir les messages réseau"""
+        while self.connexion_etablie and self.socket_reseau:
+            try:
+                message = self.socket_reseau.recv(1024).decode()
+                if message:
+                    self.traiter_message_reseau(message)
+                else:
+                    break
+            except:
+                break
+        self.connexion_etablie = False
+
+    def traiter_message_reseau(self, message):
+        """Traite les messages reçus du réseau"""
+        if message.startswith("MOVE:"):
+            # Format: MOVE:ligne,col
+            coords = message.split(":")[1].split(",")
+            ligne = int(coords[0])
+            col = int(coords[1])
+            
+            # Placer le pion de l'adversaire
+            if self.placer_pion(ligne, col, self.joueur_actuel):
+                self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
+                
+                if self.verifier_fin_de_jeu():
+                    self.game_over = True
+                    
+        elif message.startswith("VICTOIRE:"):
+            joueur_gagnant = int(message.split(":")[1])
+            self.game_over = True
+            self.gagnant = f"Joueur {joueur_gagnant}"
+            
+        elif message == "ABANDON":
+            self.game_over = True
+            self.gagnant = "abandon_adversaire"
+
+    def envoyer_message(self, message):
+        """Envoie un message via le réseau"""
+        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+            try:
+                self.socket_reseau.send(message.encode())
+            except:
+                self.connexion_etablie = False
 
     def analyser_couleur_image(self, image_path):
         try:
@@ -244,7 +299,17 @@ class Plateau_pion:
         self.joueur_actuel = 1
         self.running = True
         
+        # Démarrer le thread réseau si en mode réseau
+        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+            thread_reseau = threading.Thread(target=self.recevoir_messages_reseau, daemon=True)
+            thread_reseau.start()
+        
         while self.running:
+            # Vérifier la connexion réseau
+            if self.mode_reseau and not self.connexion_etablie:
+                self.game_over = True
+                self.gagnant = "Connexion perdue"
+            
             if self.background_image:
                 self.ecran.blit(self.background_image, (0, 0))
             else:
@@ -453,6 +518,10 @@ class Plateau_pion:
         self.ecran.blit(texte_quitter, rect_texte_quitter)
 
     def gerer_clic(self):
+        # En mode réseau, vérifier que c'est notre tour
+        if self.mode_reseau and self.joueur_actuel != self.mon_numero:
+            return
+            
         pos = pygame.mouse.get_pos()
         
         # Convertir la position en coordonnées de la grille
@@ -464,10 +533,25 @@ class Plateau_pion:
             
             # Tenter de placer un pion
             if self.placer_pion(ligne, col, self.joueur_actuel):
+                # En mode réseau, envoyer le mouvement
+                if self.mode_reseau:
+                    self.envoyer_message(f"MOVE:{ligne},{col}")
+                
                 self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1                
                 # Vérifier si le jeu est terminé
                 if self.verifier_fin_de_jeu():
-                    self.game_over = True               
+                    self.game_over = True
+                    if self.mode_reseau:
+                        # Déterminer le gagnant
+                        if self.joueur_actuel == self.mon_numero:
+                            # L'adversaire ne peut plus jouer, nous gagnons
+                            self.gagnant = "Vous"
+                            self.envoyer_message(f"VICTOIRE:{self.mon_numero}")
+                        else:
+                            # Nous ne pouvons plus jouer, l'adversaire gagne
+                            adversaire = 2 if self.mon_numero == 1 else 1
+                            self.gagnant = "Adversaire"
+                            self.envoyer_message(f"VICTOIRE:{adversaire}")
 
 # Lancement du jeu
 if __name__ == "__main__":
