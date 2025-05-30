@@ -209,48 +209,109 @@ class Plateau_pion:
         self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 70))
 
     def mouvement_valide(self, depart, arrivee):
-        """Vérifie si un mouvement est valide selon les règles de Katarenga"""
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
-        
+
+        # Interdire totalement l'accès aux coins adverses
+        if (self.joueur_actuel == 1 and (ligne_arr, col_arr) in [(9,0), (9,9)]) or \
+           (self.joueur_actuel == 2 and (ligne_arr, col_arr) in [(0,0), (0,9)]):
+            return False
+
         # Vérifier que la destination n'est pas occupée par un pion allié
         if self.plateau[ligne_arr][col_arr] == self.joueur_actuel:
             return False
-        
+
         # Vérifier que la destination n'est pas une bordure
         if self.plateau[ligne_arr][col_arr] == 10:
             return False
-          # Cas spécial : pion sur la ligne adverse (ligne d'entrée de base)
+
+        # Cas spécial : pion sur la ligne adverse (ligne d'entrée de base)
         pion_sur_ligne_adverse = False
         if (self.joueur_actuel == 1 and ligne_dep == 1) or \
            (self.joueur_actuel == 2 and ligne_dep == 8):
             pion_sur_ligne_adverse = True
-            
-            # Si le pion est sur la ligne adverse, il peut aller dans un camp adverse
-            # sans contraintes de mouvement (déplacement libre)
-            if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
-               (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+
+            # Peut entrer dans le camp adverse (case 3 pour blanc, 4 pour noir) sans contrainte de couleur
+            if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3 and ligne_arr == 0) or \
+               (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4 and ligne_arr == 9):
                 return True
-        
+
+        # Empêcher d'entrer dans son propre camp (partout sur le plateau)
+        if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
+           (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
+            return False
+
+        # Bloquer complètement l'entrée dans son propre camp (coins)
+        if (self.joueur_actuel == 1 and (ligne_arr, col_arr) in [(0,0), (0,9)]) or \
+           (self.joueur_actuel == 2 and (ligne_arr, col_arr) in [(9,0), (9,9)]):
+            return False
+
         try:
             with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
-            
-            # Vérifier si les indices sont dans les limites du plateau
+
+            # Vérifier si les indices sont dans les limites du plateau 10x10
             if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
                 return False
-                
+
             image_path = plateau_images[ligne_dep][col_dep]
-            
+            image_dest = plateau_images[ligne_arr][col_arr]
+            if "marron" in image_dest.lower():
+                return False
+
             if "rouge" in image_path.lower():
-                # Mouvement en ligne droite (horizontal ou vertical)
-                return (ligne_arr == ligne_dep or col_arr == col_dep) and not (ligne_arr == ligne_dep and col_arr == col_dep)
+                if not (ligne_arr == ligne_dep or col_arr == col_dep) or (ligne_arr == ligne_dep and col_arr == col_dep):
+                    return False
+                # Mouvement horizontal (gauche/droite)
+                if ligne_arr == ligne_dep:
+                    step = 1 if col_arr > col_dep else -1
+                    c = col_dep + step
+                    while c != col_arr + step:
+                        if self.plateau[ligne_dep][c] != 0 and c != col_arr:
+                            return False
+                        img = plateau_images[ligne_dep][c]
+                        if "rouge" in img.lower():
+                            # On ne peut pas aller après la première rouge rencontrée
+                            return c == col_arr
+                        if c == col_arr:
+                            break
+                        c += step
+                # Mouvement vertical (haut/bas)
+                else:
+                    step = 1 if ligne_arr > ligne_dep else -1
+                    l = ligne_dep + step
+                    while l != ligne_arr + step:
+                        if self.plateau[l][col_dep] != 0 and l != ligne_arr:
+                            return False
+                        img = plateau_images[l][col_dep]
+                        if "rouge" in img.lower():
+                            return l == ligne_arr
+                        if l == ligne_arr:
+                            break
+                        l += step
+                return True
             elif "bleu" in image_path.lower():
                 # Mouvement de roi (une case dans toutes les directions)
                 return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
             elif "jaune" in image_path.lower():
                 # Mouvement en diagonale
-                return abs(ligne_arr - ligne_dep) == abs(col_arr - col_dep) and ligne_arr != ligne_dep
+                if abs(ligne_arr - ligne_dep) != abs(col_arr - col_dep) or (ligne_arr == ligne_dep and col_arr == col_dep):
+                    return False
+                step_l = 1 if ligne_arr > ligne_dep else -1
+                step_c = 1 if col_arr > col_dep else -1
+                l, c = ligne_dep + step_l, col_dep + step_c
+                while (l != ligne_arr + step_l) and (c != col_arr + step_c):
+                    if self.plateau[l][c] != 0 and (l, c) != (ligne_arr, col_arr):
+                        return False
+                    img = plateau_images[l][c]
+                    if "jaune" in img.lower():
+                        # On ne peut pas aller après la première jaune rencontrée
+                        return l == ligne_arr and c == col_arr
+                    if l == ligne_arr and c == col_arr:
+                        break
+                    l += step_l
+                    c += step_c
+                return True
             elif "vert" in image_path.lower():
                 # Mouvement de cavalier
                 return (abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or \
@@ -258,9 +319,8 @@ class Plateau_pion:
             else:
                 # Mouvement libre pour les autres cases
                 return True
-                
+
         except Exception as e:
-            print(f"Erreur lors de la vérification des règles de mouvement: {e}")
             return False
 
     def get_mouvements_possibles(self, ligne, col):
@@ -296,16 +356,25 @@ class Plateau_pion:
             self.plateau[ligne_dep][col_dep] = 0
 
     def verifier_victoire(self, joueur):
-        """Vérifie si un joueur a gagné"""
-        # Compter les pions du joueur adverse
-        pions_adversaire = 0
+        # Pour les blancs (joueur 1), camps adverses = (0,0) et (0,9)
+        # Pour les noirs (joueur 2), camps adverses = (9,0) et (9,9)
+        if joueur == 1:
+            camps = [(0, 0), (0, 9)]
+            adversaire = 2
+        else:
+            camps = [(9, 0), (9, 9)]
+            adversaire = 1
+
+        # Victoire si les deux camps adverses sont occupés par un pion du joueur
+        if all(self.plateau[i][j] == joueur for i, j in camps):
+            return True
+
+        # Victoire si l'adversaire n'a plus de pions
         for i in range(10):
             for j in range(10):
-                if self.plateau[i][j] == (3 - joueur):  # Joueur adverse
-                    pions_adversaire += 1
-        
-        # Victoire si l'adversaire n'a plus de pions
-        return pions_adversaire == 0
+                if self.plateau[i][j] == adversaire:
+                    return False
+        return True
 
     def jouer_ia(self):
         """IA simple qui choisit un mouvement aléatoire parmi les possibles"""

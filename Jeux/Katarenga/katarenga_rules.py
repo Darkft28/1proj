@@ -81,12 +81,12 @@ class Plateau_pion:
         # Plateau de pions initial (10x10 avec bordures)
         self.plateau = [[3, 10, 10, 10, 10, 10, 10, 10, 10, 3],
                         [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
-                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0,  10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0,  10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0,  10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
+                        [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 1, 1, 1, 1, 1, 1, 1, 1, 10],
                         [4, 10, 10, 10, 10, 10, 10, 10, 10, 4]]
         
@@ -374,6 +374,17 @@ class Plateau_pion:
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
 
+        # PREMIER TEST : Vérification des cases marron
+        try:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
+                plateau_images = json.load(f)
+            image_dest = plateau_images[ligne_arr][col_arr]
+            if "marron" in image_dest.lower():
+                return False
+        except Exception:
+            return False
+
+        # ENSUITE : Les autres vérifications
         # Interdire totalement l'accès aux coins adverses
         if (self.joueur_actuel == 1 and (ligne_arr, col_arr) in [(9,0), (9,9)]) or \
            (self.joueur_actuel == 2 and (ligne_arr, col_arr) in [(0,0), (0,9)]):
@@ -382,36 +393,36 @@ class Plateau_pion:
         # Vérifier que la destination n'est pas occupée par un pion allié
         if self.plateau[ligne_arr][col_arr] == self.joueur_actuel:
             return False
-        
+
         # Vérifier que la destination n'est pas une bordure
         if self.plateau[ligne_arr][col_arr] == 10:
             return False
-        
+
         # Cas spécial : pion sur la ligne adverse (ligne d'entrée de base)
         pion_sur_ligne_adverse = False
         if (self.joueur_actuel == 1 and ligne_dep == 1) or \
            (self.joueur_actuel == 2 and ligne_dep == 8):
             pion_sur_ligne_adverse = True
-            
+
             # Peut entrer dans le camp adverse (case 3 pour blanc, 4 pour noir) sans contrainte de couleur
             if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3 and ligne_arr == 0) or \
                (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4 and ligne_arr == 9):
                 return True
-        
+
         # Empêcher d'entrer dans son propre camp (partout sur le plateau)
         if (self.joueur_actuel == 1 and self.plateau[ligne_arr][col_arr] == 3) or \
            (self.joueur_actuel == 2 and self.plateau[ligne_arr][col_arr] == 4):
             return False
-        
+
         # Bloquer complètement l'entrée dans son propre camp (coins)
         if (self.joueur_actuel == 1 and (ligne_arr, col_arr) in [(0,0), (0,9)]) or \
            (self.joueur_actuel == 2 and (ligne_arr, col_arr) in [(9,0), (9,9)]):
             return False
-        
+
         try:
             with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
-            
+
             # Vérifier si les indices sont dans les limites du plateau 10x10
             if ligne_dep >= len(plateau_images) or col_dep >= len(plateau_images[0]):
                 return False
@@ -438,7 +449,6 @@ class Plateau_pion:
                         if c == col_arr:
                             break
                         c += step
-                    return True
                 # Mouvement vertical (haut/bas)
                 else:
                     step = 1 if ligne_arr > ligne_dep else -1
@@ -452,7 +462,7 @@ class Plateau_pion:
                         if l == ligne_arr:
                             break
                         l += step
-                    return True
+                return True
             elif "bleu" in image_path.lower():
                 # Mouvement de roi (une case dans toutes les directions)
                 return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1 and not (ligne_arr == ligne_dep and col_arr == col_dep)
@@ -482,7 +492,7 @@ class Plateau_pion:
             else:
                 # Mouvement libre pour les autres cases
                 return True
-                
+
         except Exception as e:
             return False
 
