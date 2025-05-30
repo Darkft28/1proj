@@ -1,9 +1,27 @@
 import pygame
 import sys
+import socket
+import threading
+import json
+import queue  # Pour la queue thread-safe
+import sys
 import json
 import socket
 import threading
-from menu.config import get_theme
+import queue
+import os
+
+def get_theme():
+    """Get the current theme from config, fallback to 'Clair' if not found."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'menu', 'user_config.json')
+        if not os.path.exists(config_path):
+            return "Clair"
+        with open(config_path, "r") as f:
+            data = json.load(f)
+            return data.get("theme", "Clair")
+    except:
+        return "Clair"
 
 class Plateau_pion:
     def __init__(self, mode_reseau=None, socket_reseau=None, mon_numero=None, connexion_etablie=False):
@@ -88,12 +106,13 @@ class Plateau_pion:
 
         # État du jeu
         self.game_over = False
-        self.gagnant = None
-
-        # Boutons
+        self.gagnant = None        # Boutons
         self.bouton_abandonner = None
         self.bouton_rejouer = None
-        self.bouton_quitter = None    
+        self.bouton_quitter = None
+        
+        # Queue pour les messages réseau (thread-safe)
+        self.message_queue = queue.Queue()
         
     def get_couleur_case(self, ligne, col):
         """Récupère la couleur d'une case depuis le fichier JSON"""
@@ -149,28 +168,8 @@ class Plateau_pion:
 
     def traiter_message_reseau(self, message):
         """Traite les messages reçus du réseau"""
-        if message.startswith("MOVE:"):
-            # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
-            coords = message.split(":")[1].split(",")
-            ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
-            
-            # Appliquer le mouvement de l'adversaire
-            self.deplacer_pion((ligne_dep, col_dep), (ligne_arr, col_arr))
-            
-            # Changer de joueur
-            self.joueur_actuel = self.mon_numero
-            
-        elif message.startswith("VICTOIRE:"):
-            self.game_over = True
-            gagnant_numero = int(message.split(":")[1])
-            if gagnant_numero == self.mon_numero:
-                self.gagnant = "Vous"
-            else:
-                self.gagnant = "Adversaire"
-                
-        elif message == "ABANDON":
-            self.game_over = True
-            self.gagnant = "Adversaire a abandonné"
+        # Mettre le message dans la queue pour traitement dans le thread principal
+        self.message_queue.put(message)
 
     def envoyer_message(self, message):
         """Envoie un message via le réseau"""
@@ -198,9 +197,12 @@ class Plateau_pion:
         self.pion_selectionne = None
         self.mouvements_possibles = []  # Liste des mouvements possibles pour le pion sélectionné
         self.running = True
-        
-        # Boucle de jeu
+          # Boucle de jeu
         while self.running:
+            # Traiter les messages réseau dans le thread principal
+            if self.mode_reseau:
+                self.traiter_messages_queue()
+                
             # Vérifier la connexion réseau
             if self.mode_reseau and not self.connexion_etablie:
                 self.game_over = True
@@ -243,6 +245,9 @@ class Plateau_pion:
                     elif self.bouton_quitter and self.bouton_quitter.collidepoint(x, y):
                         self.running = False
             
+            # Traiter les messages de la queue
+            self.traiter_messages_queue()
+        
             pygame.display.flip()
         
         # Fermer la connexion réseau si active
@@ -253,6 +258,37 @@ class Plateau_pion:
                 pass
         
         return
+
+    def traiter_messages_queue(self):
+        """Traite les messages de la queue dans le thread principal (thread-safe)"""
+        try:
+            while not self.message_queue.empty():
+                message = self.message_queue.get_nowait()
+                
+                if message.startswith("MOVE:"):
+                    # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
+                    coords = message.split(":")[1].split(",")
+                    ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
+                    
+                    # Appliquer le mouvement de l'adversaire
+                    self.deplacer_pion((ligne_dep, col_dep), (ligne_arr, col_arr))
+                    
+                    # Changer de joueur
+                    self.joueur_actuel = self.mon_numero
+                    
+                elif message.startswith("VICTOIRE:"):
+                    self.game_over = True
+                    gagnant_numero = int(message.split(":")[1])
+                    if gagnant_numero == self.mon_numero:
+                        self.gagnant = "Vous"
+                    else:
+                        self.gagnant = "Adversaire"
+                        
+                elif message == "ABANDON":
+                    self.game_over = True
+                    self.gagnant = "Adversaire a abandonné"
+        except queue.Empty:
+            pass
 
     def afficher_preview_mouvements(self):
         """Affiche des cercles noirs pour les mouvements possibles"""

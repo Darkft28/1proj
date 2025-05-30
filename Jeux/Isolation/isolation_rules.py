@@ -3,7 +3,20 @@ import sys
 import json
 import socket
 import threading
-from menu.config import get_theme
+import queue
+import os
+
+def get_theme():
+    """Get the current theme from config, fallback to 'Clair' if not found."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'menu', 'user_config.json')
+        if not os.path.exists(config_path):
+            return "Clair"
+        with open(config_path, "r") as f:
+            data = json.load(f)
+            return data.get("theme", "Clair")
+    except:
+        return "Clair"
 
 
 class Plateau_pion:
@@ -85,12 +98,14 @@ class Plateau_pion:
         self.LARGEUR_BOUTON = int(400 * self.RATIO_X)
         self.HAUTEUR_BOUTON = int(80 * self.RATIO_Y)
         self.ESPACE_BOUTONS = int(40 * self.RATIO_Y)
-        
-        # État du jeu
+          # État du jeu
         self.game_over = False
+        self.running = False
         self.gagnant = None
         
-        # Initialiser le joueur actuel
+        # Queue pour les messages réseau (thread-safe)
+        self.message_queue = queue.Queue()
+          # Initialiser le joueur actuel
         self.joueur_actuel = 1
 
     def recevoir_messages_reseau(self):
@@ -105,30 +120,11 @@ class Plateau_pion:
             except:
                 break
         self.connexion_etablie = False
-
+        
     def traiter_message_reseau(self, message):
         """Traite les messages reçus du réseau"""
-        if message.startswith("MOVE:"):
-            # Format: MOVE:ligne,col
-            coords = message.split(":")[1].split(",")
-            ligne = int(coords[0])
-            col = int(coords[1])
-            
-            # Placer le pion de l'adversaire
-            if self.placer_pion(ligne, col, self.joueur_actuel):
-                self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
-                
-                if self.verifier_fin_de_jeu():
-                    self.game_over = True
-                    
-        elif message.startswith("VICTOIRE:"):
-            joueur_gagnant = int(message.split(":")[1])
-            self.game_over = True
-            self.gagnant = f"Joueur {joueur_gagnant}"
-            
-        elif message == "ABANDON":
-            self.game_over = True
-            self.gagnant = "abandon_adversaire"
+        # Mettre le message dans la queue pour traitement dans le thread principal
+        self.message_queue.put(message)
 
     def envoyer_message(self, message):
         """Envoie un message via le réseau"""
@@ -300,13 +296,16 @@ class Plateau_pion:
         
         self.joueur_actuel = 1
         self.running = True
-        
-        # Démarrer le thread réseau si en mode réseau
+          # Démarrer le thread réseau si en mode réseau
         if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
             thread_reseau = threading.Thread(target=self.recevoir_messages_reseau, daemon=True)
             thread_reseau.start()
-        
+            
         while self.running:
+            # Traiter les messages réseau dans le thread principal
+            if self.mode_reseau:
+                self.traiter_messages_queue()
+                
             # Vérifier la connexion réseau
             if self.mode_reseau and not self.connexion_etablie:
                 self.game_over = True
@@ -561,6 +560,36 @@ class Plateau_pion:
                             adversaire = 2 if self.mon_numero == 1 else 1
                             self.gagnant = "Adversaire"
                             self.envoyer_message(f"VICTOIRE:{adversaire}")
+
+    def traiter_messages_queue(self):
+        """Traite les messages de la queue dans le thread principal (thread-safe)"""
+        try:
+            while not self.message_queue.empty():
+                message = self.message_queue.get_nowait()
+                
+                if message.startswith("MOVE:"):
+                    # Format: MOVE:ligne,col
+                    coords = message.split(":")[1].split(",")
+                    ligne = int(coords[0])
+                    col = int(coords[1])
+                    
+                    # Placer le pion de l'adversaire
+                    if self.placer_pion(ligne, col, self.joueur_actuel):
+                        self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1
+                        
+                        if self.verifier_fin_de_jeu():
+                            self.game_over = True
+                            
+                elif message.startswith("VICTOIRE:"):
+                    joueur_gagnant = int(message.split(":")[1])
+                    self.game_over = True
+                    self.gagnant = f"Joueur {joueur_gagnant}"
+                    
+                elif message == "ABANDON":
+                    self.game_over = True
+                    self.gagnant = "abandon_adversaire"
+        except queue.Empty:
+            pass
 
 
 # Lancement du jeu

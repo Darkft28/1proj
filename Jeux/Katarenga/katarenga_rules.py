@@ -3,7 +3,25 @@ import sys
 import json
 import socket
 import threading
-from menu.config import get_theme
+import queue  # Pour la queue thread-safe
+import sys
+import json
+import socket
+import threading
+import queue
+import os
+
+def get_theme():
+    """Get the current theme from config, fallback to 'Clair' if not found."""
+    try:
+        config_path = os.path.join(os.path.dirname(__file__), '..', '..', 'menu', 'user_config.json')
+        if not os.path.exists(config_path):
+            return "Clair"
+        with open(config_path, "r") as f:
+            data = json.load(f)
+            return data.get("theme", "Clair")
+    except:
+        return "Clair"
 
 
 class Plateau_pion:
@@ -106,6 +124,9 @@ class Plateau_pion:
         self.running = True
 
         self.tour = 0  # Compteur de tours
+        
+        # Queue pour les messages réseau (thread-safe)
+        self.message_queue = queue.Queue()
 
     def get_font(self, size):
         """Retourne la police Gloomie Saturday à la taille spécifiée, avec fallback"""
@@ -127,9 +148,17 @@ class Plateau_pion:
             thread_recevoir = threading.Thread(target=self.recevoir_messages_reseau)
             thread_recevoir.daemon = True
             thread_recevoir.start()
-        
-        # Boucle de jeu
+          # Boucle de jeu
         while self.running:
+            # Traiter les messages réseau dans le thread principal
+            if self.mode_reseau:
+                self.traiter_messages_queue()
+                
+            # Vérifier la connexion réseau
+            if self.mode_reseau and not self.connexion_etablie:
+                self.game_over = True
+                self.gagnant = "Connexion perdue"
+                
             self.ecran.blit(self.background_image, (0, 0))
             self.dessiner_plateau()
             self.afficher_preview_mouvements()
@@ -562,6 +591,62 @@ class Plateau_pion:
         self.joueur_actuel = 1
         self.game_over = False
         self.gagnant = None
+
+    def recevoir_messages_reseau(self):
+        """Thread pour recevoir les messages réseau"""
+        while self.connexion_etablie and self.socket_reseau:
+            try:
+                message = self.socket_reseau.recv(1024).decode()
+                if message:
+                    self.traiter_message_reseau(message)
+                else:
+                    break
+            except:
+                break
+        self.connexion_etablie = False
+
+    def traiter_message_reseau(self, message):
+        """Traite les messages reçus du réseau"""
+        # Mettre le message dans la queue pour traitement dans le thread principal
+        self.message_queue.put(message)
+
+    def traiter_messages_queue(self):
+        """Traite les messages de la queue dans le thread principal (thread-safe)"""
+        try:
+            while not self.message_queue.empty():
+                message = self.message_queue.get_nowait()
+                
+                if message.startswith("MOVE:"):
+                    # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
+                    coords = message.split(":")[1].split(",")
+                    ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
+                    
+                    # Appliquer le mouvement de l'adversaire
+                    if self.deplacer_pion((ligne_dep, col_dep), (ligne_arr, col_arr)):
+                        # Changer de joueur
+                        self.joueur_actuel = 1 if self.joueur_actuel == 2 else 2
+                        
+                elif message.startswith("VICTOIRE:"):
+                    self.game_over = True
+                    gagnant_numero = int(message.split(":")[1])
+                    if gagnant_numero == self.mon_numero:
+                        self.gagnant = "Vous"
+                    else:
+                        self.gagnant = "Adversaire"
+                        
+                elif message == "ABANDON":
+                    self.game_over = True
+                    self.gagnant = "Adversaire a abandonné"
+        except queue.Empty:
+            pass
+
+    def envoyer_message(self, message):
+        """Envoie un message via le réseau"""
+        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+            try:
+                self.socket_reseau.send(message.encode())
+            except:
+                self.connexion_etablie = False
 
 # Lancement du jeu
 if __name__ == "__main__":
