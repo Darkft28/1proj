@@ -138,14 +138,8 @@ class MenuMode:
             with open("plateau_final/plateau_finale.json", 'w') as f:
                 json.dump(plateau_10x10, f, indent=2)
             
-            print("✅ Plateau Katarenga 10x10 généré avec succès !")
-            print(f"   • Coins placés en (0,0), (0,9), (9,0), (9,9)")
-            print(f"   • Plateau final 8x8 placé entre (1,1) et (8,8)")
-            print(f"   • Bordures sur le reste du plateau")
-            print(f"   • Sauvegardé dans plateau_final/plateau_finale.json")
-            
         except Exception as e:
-            print(f"❌ Erreur lors de la génération du plateau Katarenga: {e}")
+            print(f"Erreur lors de la génération du plateau Katarenga: {e}")
 
     def lancer_jeu(self, mode):
         if self.jeu == "Congress":

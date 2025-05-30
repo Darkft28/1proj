@@ -3,6 +3,7 @@ import sys
 import json
 from menu.config import get_theme
 
+
 class Plateau_pion:
     def __init__(self):
         pygame.init()

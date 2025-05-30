@@ -151,7 +151,8 @@ class Menu:
             self.background_image = pygame.image.load("assets/menu/menu-claire.png")
         self.background_image = pygame.transform.scale(self.background_image, (self.LARGEUR, self.HAUTEUR))
 
+
 if __name__ == "__main__":
     menu = Menu()
     menu.executer()
-    
+
