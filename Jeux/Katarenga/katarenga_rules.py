@@ -166,7 +166,7 @@ class Plateau_pion:
                         if self.bouton_rejouer.collidepoint(x, y):
                             self.reinitialiser_jeu()
                         elif self.bouton_quitter.collidepoint(x, y):
-                            self.running = False
+                            self.running = False  # Juste arrêter la boucle de jeu
                             pygame.quit()
                             from menu.menu import Menu
                             menu = Menu()
