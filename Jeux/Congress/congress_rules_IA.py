@@ -89,7 +89,7 @@ class Plateau_pion:
 
         # État du jeu
         self.game_over = False
-        self.gagnant = None
+        self.gagnant = None        
         self.bouton_abandonner = None
         self.bouton_rejouer = None
         self.bouton_quitter = None
@@ -97,7 +97,7 @@ class Plateau_pion:
     def get_couleur_case(self, ligne, col):
         """Récupère la couleur d'une case depuis le fichier JSON"""
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Vérifier si les indices sont dans les limites du plateau
@@ -200,11 +200,10 @@ class Plateau_pion:
             centre_y = self.OFFSET_Y + ligne * self.TAILLE_CASE + self.TAILLE_CASE // 2
             rayon = int(self.TAILLE_CASE * 0.42)
             pygame.draw.circle(self.ecran, self.VERT, (centre_x, centre_y), rayon, 5)
-    
     def dessiner_plateau(self):
         # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
                 plateau_images = json.load(f)
             
             # Si le plateau JSON n'est pas de taille 8x8, on l'adapte

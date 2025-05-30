@@ -1,3 +1,4 @@
+# filepath: c:\Users\robin\Desktop\supinfo\1proj\1proj\Board\board_complet.py
 import pygame
 import json
 import os
@@ -61,10 +62,15 @@ class SelecteurPlateau:
         except pygame.error as e:
             print(f"Erreur lors du chargement des images: {e}")
             sys.exit(1)
-        
-        # Liste des plateaux
+          # Liste des plateaux
         self.plateaux_sauvegardes = []
         self.boutons_plateaux = []
+        
+        # Variables pour les transformations de plateaux (AVANT charger_liste_plateaux)
+        self.plateaux_transformations = {}  # Dictionnaire pour stocker les transformations de chaque plateau
+        self.boutons_rotation_gauche = []
+        self.boutons_rotation_droite = []
+        self.boutons_miroir = []
         
         # Charger la liste initiale
         self.charger_liste_plateaux()
@@ -94,6 +100,60 @@ class SelecteurPlateau:
         # Calculer le nombre total de pages
         self.nombre_pages = (len(self.plateaux_sauvegardes) + 7) // 8
 
+        # Initialiser les transformations pour chaque plateau
+        for plateau in self.plateaux_sauvegardes:
+            if plateau not in self.plateaux_transformations:
+                self.plateaux_transformations[plateau] = {
+                    'rotation': 0,  # 0, 90, 180, 270
+                    'mirroir': False
+                }
+
+    def rotationner_plateau(self, plateau_data, sens_horaire=True):
+        """Rotation d'un plateau de 90° dans le sens horaire ou anti-horaire"""
+        taille = len(plateau_data)
+        plateau_rotation = [[None for _ in range(taille)] for _ in range(taille)]
+        
+        for i in range(taille):
+            for j in range(taille):
+                if sens_horaire:
+                    nouveau_i = j
+                    nouveau_j = taille - 1 - i
+                else:
+                    nouveau_i = taille - 1 - j
+                    nouveau_j = i
+                plateau_rotation[nouveau_i][nouveau_j] = plateau_data[i][j]
+        
+        return plateau_rotation
+
+    def miroir_plateau(self, plateau_data):
+        """Effet miroir horizontal sur un plateau"""
+        taille = len(plateau_data)
+        plateau_miroir = [[None for _ in range(taille)] for _ in range(taille)]
+        
+        for i in range(taille):
+            for j in range(taille):
+                plateau_miroir[i][taille - 1 - j] = plateau_data[i][j]
+        
+        return plateau_miroir
+
+    def appliquer_transformations(self, plateau_data, nom_plateau):
+        """Applique toutes les transformations stockées pour un plateau"""
+        plateau_transforme = [row[:] for row in plateau_data]  # Copie profonde
+        
+        if nom_plateau in self.plateaux_transformations:
+            transformations = self.plateaux_transformations[nom_plateau]
+            
+            # Appliquer les rotations
+            rotation = transformations['rotation']
+            for _ in range(rotation // 90):
+                plateau_transforme = self.rotationner_plateau(plateau_transforme, sens_horaire=True)
+            
+            # Appliquer le miroir
+            if transformations['mirroir']:
+                plateau_transforme = self.miroir_plateau(plateau_transforme)
+        
+        return plateau_transforme
+
     def dessiner_ecran_selection(self):
         self.ecran.blit(self.background_image, (0, 0))
         
@@ -101,11 +161,9 @@ class SelecteurPlateau:
         police = pygame.font.Font(None, int(48 * min(self.RATIO_X, self.RATIO_Y)))
         titre = police.render("Sélectionnez un plateau", True, self.BLANC)
         titre_rect = titre.get_rect(centerx=self.LARGEUR // 2, y=int(30 * self.RATIO_Y))
-        self.ecran.blit(titre, titre_rect)
-        
-        # Dimensions des miniatures
-        taille_miniature = int(300 * min(self.RATIO_X, self.RATIO_Y))
-        espace = int(50 * min(self.RATIO_X, self.RATIO_Y))
+        self.ecran.blit(titre, titre_rect)          # Dimensions des miniatures
+        taille_miniature = int(250 * min(self.RATIO_X, self.RATIO_Y))  # Réduit davantage
+        espace = int(120 * min(self.RATIO_X, self.RATIO_Y))  # Beaucoup plus d'espace
         
         # Calcul pour centrer la grille 4x2
         self.total_largeur = (taille_miniature * 4) + (espace * 3)
@@ -117,6 +175,9 @@ class SelecteurPlateau:
         # Afficher les miniatures
         debut_index = self.page_courante * 8
         self.boutons_plateaux = []
+        self.boutons_rotation_gauche = []
+        self.boutons_rotation_droite = []
+        self.boutons_miroir = []
         
         for i in range(min(8, len(self.plateaux_sauvegardes) - debut_index)):
             ligne = i // 4
@@ -130,15 +191,17 @@ class SelecteurPlateau:
             # Fond gris pour tous les plateaux
             pygame.draw.rect(self.ecran, (60, 60, 60), rect)
             
-            # Afficher la prévisualisation
+            # Afficher la prévisualisation avec transformations
             try:
                 with open(f"plateaux/{self.plateaux_sauvegardes[debut_index + i]}", 'r') as f:
                     plateau_data = json.load(f)
+                    # Appliquer les transformations
+                    plateau_transforme = self.appliquer_transformations(plateau_data, self.plateaux_sauvegardes[debut_index + i])
                     taille_tuile = taille_miniature // 4
                     
                     for ligne_p in range(4):
                         for col_p in range(4):
-                            chemin_image = plateau_data[ligne_p][col_p]
+                            chemin_image = plateau_transforme[ligne_p][col_p]
                             tuile_rect = pygame.Rect(
                                 x + (col_p * taille_tuile),
                                 y + (ligne_p * taille_tuile),
@@ -164,7 +227,58 @@ class SelecteurPlateau:
             if self.plateaux_sauvegardes[debut_index + i] in self.plateaux_selectionnes:
                 pygame.draw.rect(self.ecran, self.COULEUR_SELECTION, rect, 8)  # Bordure verte épaisse
             else:
-                pygame.draw.rect(self.ecran, self.BLANC, rect, 2)  # Bordure blanche fine
+                pygame.draw.rect(self.ecran, self.BLANC, rect, 2)  # Bordure blanche fine            # Ajouter les boutons de rotation (flèches) à côté de chaque miniature
+            taille_bouton = int(40 * min(self.RATIO_X, self.RATIO_Y))  # Plus grand pour compenser
+            
+            # Flèche rotation gauche
+            fleche_gauche_rect = pygame.Rect(
+                x - taille_bouton - 15,  # Encore plus d'espace
+                y + taille_miniature // 2 - taille_bouton // 2,
+                taille_bouton,
+                taille_bouton
+            )
+            pygame.draw.rect(self.ecran, self.BLEU, fleche_gauche_rect)
+            pygame.draw.rect(self.ecran, self.BLANC, fleche_gauche_rect, 2)
+            self.boutons_rotation_gauche.append(fleche_gauche_rect)
+            
+            # Texte flèche gauche
+            police_bouton = pygame.font.Font(None, int(32 * min(self.RATIO_X, self.RATIO_Y)))  # Police encore plus grande
+            texte_gauche = police_bouton.render("<", True, self.BLANC)
+            rect_texte_gauche = texte_gauche.get_rect(center=fleche_gauche_rect.center)
+            self.ecran.blit(texte_gauche, rect_texte_gauche)
+            
+            # Flèche rotation droite
+            fleche_droite_rect = pygame.Rect(
+                x + taille_miniature + 15,  # Encore plus d'espace
+                y + taille_miniature // 2 - taille_bouton // 2,
+                taille_bouton,
+                taille_bouton
+            )
+            pygame.draw.rect(self.ecran, self.BLEU, fleche_droite_rect)
+            pygame.draw.rect(self.ecran, self.BLANC, fleche_droite_rect, 2)
+            self.boutons_rotation_droite.append(fleche_droite_rect)
+            
+            # Texte flèche droite
+            texte_droite = police_bouton.render(">", True, self.BLANC)
+            rect_texte_droite = texte_droite.get_rect(center=fleche_droite_rect.center)
+            self.ecran.blit(texte_droite, rect_texte_droite)
+            
+            # Bouton miroir en dessous de la miniature
+            bouton_miroir_rect = pygame.Rect(
+                x + taille_miniature // 4,
+                y + taille_miniature + 15,  # Encore plus d'espace en bas
+                taille_miniature // 2,
+                int(35 * min(self.RATIO_X, self.RATIO_Y))  # Plus grand
+            )
+            pygame.draw.rect(self.ecran, self.ROUGE, bouton_miroir_rect)  # Changé en rouge
+            pygame.draw.rect(self.ecran, self.BLANC, bouton_miroir_rect, 2)
+            self.boutons_miroir.append(bouton_miroir_rect)
+            
+            # Texte bouton miroir
+            police_miroir = pygame.font.Font(None, int(20 * min(self.RATIO_X, self.RATIO_Y)))  # Police plus grande
+            texte_miroir = police_miroir.render("Miroir", True, self.BLANC)
+            rect_texte_miroir = texte_miroir.get_rect(center=bouton_miroir_rect.center)
+            self.ecran.blit(texte_miroir, rect_texte_miroir)
 
         # Boutons de navigation
         if self.nombre_pages > 1:
@@ -319,9 +433,11 @@ class SelecteurPlateau:
         return None
 
     def dessiner_plateau_miniature(self, nom_fichier, x, y, taille):
-        """Méthode utilitaire pour dessiner un plateau miniature"""
+        """Méthode utilitaire pour dessiner un plateau miniature avec transformations"""
         with open(f"plateaux/{nom_fichier}", 'r') as f:
             plateau_data = json.load(f)
+            # Appliquer les transformations
+            plateau_transforme = self.appliquer_transformations(plateau_data, nom_fichier)
             taille_tuile = taille // 4
             
             # Fond du plateau
@@ -331,7 +447,7 @@ class SelecteurPlateau:
             # Dessiner les tuiles
             for ligne in range(4):
                 for col in range(4):
-                    chemin_image = plateau_data[ligne][col]
+                    chemin_image = plateau_transforme[ligne][col]
                     tuile_rect = pygame.Rect(
                         x + (col * taille_tuile),
                         y + (ligne * taille_tuile),
@@ -428,6 +544,34 @@ class SelecteurPlateau:
                             
                         if retour_rect.collidepoint(x, y):
                             return None
+                        
+                        # Vérifier les clics sur les boutons de rotation et miroir
+                        debut_index = self.page_courante * 8
+                        for idx in range(len(self.boutons_rotation_gauche)):
+                            index_reel = debut_index + idx
+                            if index_reel < len(self.plateaux_sauvegardes):
+                                plateau_nom = self.plateaux_sauvegardes[index_reel]
+                                
+                                # Rotation gauche (anti-horaire)
+                                if self.boutons_rotation_gauche[idx].collidepoint(x, y):
+                                    if plateau_nom not in self.plateaux_transformations:
+                                        self.plateaux_transformations[plateau_nom] = {'rotation': 0, 'mirroir': False}
+                                    self.plateaux_transformations[plateau_nom]['rotation'] = (self.plateaux_transformations[plateau_nom]['rotation'] - 90) % 360
+                                    continue
+                                
+                                # Rotation droite (horaire)
+                                if self.boutons_rotation_droite[idx].collidepoint(x, y):
+                                    if plateau_nom not in self.plateaux_transformations:
+                                        self.plateaux_transformations[plateau_nom] = {'rotation': 0, 'mirroir': False}
+                                    self.plateaux_transformations[plateau_nom]['rotation'] = (self.plateaux_transformations[plateau_nom]['rotation'] + 90) % 360
+                                    continue
+                                
+                                # Miroir
+                                if self.boutons_miroir[idx].collidepoint(x, y):
+                                    if plateau_nom not in self.plateaux_transformations:
+                                        self.plateaux_transformations[plateau_nom] = {'rotation': 0, 'mirroir': False}
+                                    self.plateaux_transformations[plateau_nom]['mirroir'] = not self.plateaux_transformations[plateau_nom]['mirroir']
+                                    continue
                             
                         # Sélection des plateaux
                         for idx, rect in enumerate(self.boutons_plateaux):
@@ -514,23 +658,25 @@ class SelecteurPlateau:
                                 with open(f"plateaux/{self.dropped_plateaux[i][j]}", 'r') as f:
                                     plateau_data = json.load(f)
                                     
+                                    # Appliquer les transformations au plateau
+                                    plateau_transforme = self.appliquer_transformations(plateau_data, self.dropped_plateaux[i][j])
+                                    
                                     # Vérifier la taille du plateau source
-                                    taille_source = len(plateau_data)
+                                    taille_source = len(plateau_transforme)
                                     
                                     # Calculer les offsets pour le placement dans le plateau final
                                     offset_ligne = i * 4
                                     offset_col = j * 4
                                     
-                                    # Copier les cases du plateau dans le plateau final
+                                    # Copier les cases du plateau transformé dans le plateau final
                                     for ligne_source in range(min(4, taille_source)):
-                                        for col_source in range(min(4, len(plateau_data[ligne_source]))):
+                                        for col_source in range(min(4, len(plateau_transforme[ligne_source]))):
                                             ligne_finale = offset_ligne + ligne_source
                                             col_finale = offset_col + col_source
-                                            plateau_final[ligne_finale][col_finale] = plateau_data[ligne_source][col_source]
-                    
-                    # Sauvegarder le plateau dans le fichier unique plateaux/plateau_finale.json
+                                            plateau_final[ligne_finale][col_finale] = plateau_transforme[ligne_source][col_source]
+                      # Sauvegarder le plateau dans le fichier unique plateau_final/plateau_finale.json
                     try:
-                        with open(os.path.join("plateaux", "plateau_finale.json"), 'w') as f:
+                        with open(os.path.join("plateau_final", "plateau_finale.json"), 'w') as f:
                             json.dump(plateau_final, f, indent=4)
                     except Exception as e:
                         print(f"Erreur lors de la sauvegarde du plateau: {e}")

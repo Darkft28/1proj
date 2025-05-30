@@ -144,16 +144,15 @@ class Plateau_pion:
                 nl, nc = ligne + dl, col + dc
                 while 0 <= nl < 8 and 0 <= nc < 8:
                     cases_bloquees.append((nl, nc))
-                    # S'arrêter si case occupée ou première case rouge rencontrée
-                    if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
+                    # S'arrêter si case occupée ou première case rouge rencontrée                    
+                if self.plateau[nl][nc] != 0 or self.get_couleur_case(nl, nc) == self.ROUGE:
                         break
-                    nl, nc = nl + dl, nc + dc
-                    
+                nl, nc = nl + dl, nc + dc
         return cases_bloquees
-
+    
     def get_couleur_case(self, ligne, col):
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici
+            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
@@ -280,7 +279,7 @@ class Plateau_pion:
         
         return
 
-    def reinitialiser_jeu(self):
+    def reinitialiser_jeu(self):        
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
         self.cases_bloquees = [[False for _ in range(8)] for _ in range(8)]
         self.joueur_actuel = 1
@@ -289,7 +288,7 @@ class Plateau_pion:
 
     def dessiner_plateau(self):
         try:
-            with open("plateaux/plateau_finale.json", 'r') as f:  # <-- ici aussi
+            with open("plateau_final/plateau_finale.json", 'r') as f:  # <-- ici aussi
                 plateau_images = json.load(f)
             
             # Adapter le plateau à 8x8 si nécessaire
