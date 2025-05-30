@@ -199,10 +199,10 @@ class Plateau_pion:
         """Affiche le tour actuel"""
         police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
         if self.joueur_actuel == self.joueur_humain:
-            texte = "Votre tour - Déplacez vos pions"
+            texte = "Votre tour - Deplacez vos pions"
             couleur = self.NOIR
         else:
-            texte = "L'ordinateur réfléchit..."
+            texte = "L'ordinateur reflechit..."
             couleur = self.BLANC
         
         surface_texte = police.render(texte, True, couleur)
@@ -349,6 +349,8 @@ class Plateau_pion:
         
         # Déplacer le pion
         if pion_entre_dans_camp:
+            # Mettre à jour la case d'arrivée avant de vider la case de départ
+            self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
             self.plateau[ligne_dep][col_dep] = 0
         else:
             # Déplacement normal
@@ -448,48 +450,50 @@ class Plateau_pion:
         """Affiche l'écran de fin de jeu"""
         police_grand = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
         
-        # Déterminer le gagnant
+        # Message de victoire au-dessus du plateau
         if self.gagnant == "abandon":
-            texte_principal = "Partie abandonnée"
+            texte_principal = "Partie abandonnee"
         elif self.gagnant == "IA":
             texte_principal = "L'IA gagne !"
         else:
             texte_principal = "Vous gagnez !"
             
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        y_message = self.OFFSET_Y - surface_principale.get_height() - 30
+        if y_message < 0:
+            y_message = 0
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 50
+            y_message
         ))
 
-        # Boutons
+        # Boutons en bas du plateau
         largeur_bouton = 250
         hauteur_bouton = 60
+        y_boutons = self.OFFSET_Y + self.TAILLE_CASE * 10 + 40  # Position Y juste sous le plateau
+        police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
         
+        # Bouton Rejouer 
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2 + 50,
+            y_boutons,
             largeur_bouton,
             hauteur_bouton
         )
-        
-        self.bouton_quitter = pygame.Rect(
-            self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2 + 50,
-            largeur_bouton,
-            hauteur_bouton
-        )
-        
-        pygame.draw.rect(self.ecran, self.VERT, self.bouton_rejouer, border_radius=20)
-        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_quitter, border_radius=20)
-        
-        police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 30)
-        
-        texte_rejouer = police.render("Rejouer", True, self.BLANC)
+        pygame.draw.rect(self.ecran, self.BLEU, self.bouton_rejouer, border_radius=20)
+        texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
         rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
         self.ecran.blit(texte_rejouer, rect_texte_rejouer)
         
-        texte_quitter = police.render("Quitter", True, self.BLANC)
+        # Bouton Quitter (rouge)
+        self.bouton_quitter = pygame.Rect(
+            self.LARGEUR // 2 + 20,
+            y_boutons,
+            largeur_bouton,
+            hauteur_bouton
+        )
+        pygame.draw.rect(self.ecran, self.ROUGE, self.bouton_quitter, border_radius=20)
+        texte_quitter = police_bouton.render("Quitter", True, self.BLANC)
         rect_texte_quitter = texte_quitter.get_rect(center=self.bouton_quitter.center)
         self.ecran.blit(texte_quitter, rect_texte_quitter)
 
@@ -599,7 +603,7 @@ class Plateau_pion:
                     if self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
                         self.game_over = True
                         self.gagnant = "abandon"
-                    elif self.joueur_actuel == self.joueur_humain:  # Ne permettre le clic que si c'est le tour du joueur
+                    elif self.joueur_actuel == self.joueur_humain:
                         self.gerer_clic()
                 elif event.type == pygame.MOUSEBUTTONDOWN and self.game_over:
                     x, y = event.pos
@@ -609,10 +613,4 @@ class Plateau_pion:
                         self.running = False
             
             pygame.display.flip()
-        
-        pygame.quit()
-
-# Lancement du jeu
-if __name__ == "__main__":
-    jeu = Plateau_pion()
-    jeu.run()
+    
