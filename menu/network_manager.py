@@ -6,7 +6,7 @@ import random
 import string
 import json
 import os
-from .config import get_theme
+from config import get_theme
 
 class NetworkManager:
     def __init__(self, jeu_nom):
@@ -62,6 +62,10 @@ class NetworkManager:
         self.jeu_instance = None
         self.mon_numero = None  # 1 pour host, 2 pour guest
         self.adversaire_deconnecte = False
+        
+        # Signaux pour communication entre threads
+        self._signal_demarrer_jeu_host = False
+        self._signal_demarrer_jeu_guest = False
         
         # Import de pyperclip si disponible
         try:
@@ -142,13 +146,13 @@ class NetworkManager:
         
         try:
             police_titre = pygame.font.Font(self.font_path, 48)
-            police_info = pygame.font.Font(self.font_path, 32)
-            police_code = pygame.font.Font(self.font_path, 48)
+            police_info = pygame.font.Font(self.font_path, 28)
+            police_code = pygame.font.Font(self.font_path, 36)
             police_bouton = pygame.font.Font(self.font_path, 24)
         except:
             police_titre = pygame.font.Font(None, 48)
-            police_info = pygame.font.Font(None, 32)
-            police_code = pygame.font.Font(None, 48)
+            police_info = pygame.font.Font(None, 28)
+            police_code = pygame.font.Font(None, 36)
             police_bouton = pygame.font.Font(None, 24)
         
         # Titre
@@ -176,24 +180,24 @@ class NetworkManager:
         # Boutons de copie si pyperclip est disponible
         if self.pyperclip:
             # Bouton copier IP
-            self.bouton_copier_ip = pygame.Rect(self.LARGEUR//2 - 250, y_info + 200, 200, 40)
-            pygame.draw.rect(self.ecran, self.BLEU, self.bouton_copier_ip, border_radius=15)
-            texte_copier_ip = police_bouton.render("Copier IP", True, self.BLANC)
-            rect_copier_ip = texte_copier_ip.get_rect(center=self.bouton_copier_ip.center)
-            self.ecran.blit(texte_copier_ip, rect_copier_ip)
+            self.bouton_copier_ip = pygame.Rect(self.LARGEUR//2 + 150, y_info - 20, 100, 40)
+            pygame.draw.rect(self.ecran, self.BLEU, self.bouton_copier_ip, border_radius=10)
+            texte_copier_ip = police_bouton.render("Copier", True, self.BLANC)
+            rect_texte_copier_ip = texte_copier_ip.get_rect(center=self.bouton_copier_ip.center)
+            self.ecran.blit(texte_copier_ip, rect_texte_copier_ip)
             
             # Bouton copier code
-            self.bouton_copier_code = pygame.Rect(self.LARGEUR//2 + 50, y_info + 200, 200, 40)
-            pygame.draw.rect(self.ecran, self.BLEU, self.bouton_copier_code, border_radius=15)
-            texte_copier_code = police_bouton.render("Copier Code", True, self.BLANC)
-            rect_copier_code = texte_copier_code.get_rect(center=self.bouton_copier_code.center)
-            self.ecran.blit(texte_copier_code, rect_copier_code)
+            self.bouton_copier_code = pygame.Rect(self.LARGEUR//2 + 150, y_info + 110, 100, 40)
+            pygame.draw.rect(self.ecran, self.BLEU, self.bouton_copier_code, border_radius=10)
+            texte_copier_code = police_bouton.render("Copier", True, self.BLANC)
+            rect_texte_copier_code = texte_copier_code.get_rect(center=self.bouton_copier_code.center)
+            self.ecran.blit(texte_copier_code, rect_texte_copier_code)
         
         # Message de copie
         if self.message_copie and pygame.time.get_ticks() - self.temps_copie < 2000:
-            texte_msg = police_info.render(self.message_copie, True, self.VERT)
-            rect_msg = texte_msg.get_rect(center=(self.LARGEUR//2, y_info + 280))
-            self.ecran.blit(texte_msg, rect_msg)
+            texte_copie = police_bouton.render(self.message_copie, True, self.VERT)
+            rect_copie = texte_copie.get_rect(center=(self.LARGEUR//2, y_info + 200))
+            self.ecran.blit(texte_copie, rect_copie)
         
         # Bouton Retour
         self.bouton_retour = pygame.Rect(50, 50, 120, 40)
@@ -209,13 +213,13 @@ class NetworkManager:
         
         try:
             police_titre = pygame.font.Font(self.font_path, 48)
-            police_info = pygame.font.Font(self.font_path, 32)
-            police_input = pygame.font.Font(self.font_path, 28)
+            police_info = pygame.font.Font(self.font_path, 28)
+            police_input = pygame.font.Font(self.font_path, 24)
             police_bouton = pygame.font.Font(self.font_path, 24)
         except:
             police_titre = pygame.font.Font(None, 48)
-            police_info = pygame.font.Font(None, 32)
-            police_input = pygame.font.Font(None, 28)
+            police_info = pygame.font.Font(None, 28)
+            police_input = pygame.font.Font(None, 24)
             police_bouton = pygame.font.Font(None, 24)
         
         # Titre
@@ -264,17 +268,18 @@ class NetworkManager:
         # Activer le bouton seulement si les deux champs sont remplis
         if self.ip_input and self.code_input:
             pygame.draw.rect(self.ecran, self.VERT, self.bouton_connexion, border_radius=20)
-            texte_connexion = police_info.render("Se connecter", True, self.BLANC)
+            texte_connexion = police_bouton.render("Se connecter", True, self.BLANC)
         else:
             pygame.draw.rect(self.ecran, self.GRIS, self.bouton_connexion, border_radius=20)
-            texte_connexion = police_info.render("Se connecter", True, self.BLANC)
+            texte_connexion = police_bouton.render("Se connecter", True, self.BLANC)
         
+        pygame.draw.rect(self.ecran, self.BLANC, self.bouton_connexion, 3, border_radius=20)
         rect_texte_connexion = texte_connexion.get_rect(center=self.bouton_connexion.center)
         self.ecran.blit(texte_connexion, rect_texte_connexion)
         
         # Message d'erreur
         if self.message_erreur:
-            texte_erreur = police_info.render(self.message_erreur, True, self.ROUGE)
+            texte_erreur = police_bouton.render(self.message_erreur, True, self.ROUGE)
             rect_erreur = texte_erreur.get_rect(center=(self.LARGEUR//2, y_code + 200))
             self.ecran.blit(texte_erreur, rect_erreur)
         
@@ -308,17 +313,45 @@ class NetworkManager:
             self.socket_serveur.listen(1)
             print(f"Serveur démarré sur {self.ip_locale}:{self.port}")
             
-            # Attendre une connexion
-            self.socket_client, adresse_client = self.socket_serveur.accept()
-            print(f"Client connecté depuis {adresse_client}")
-            self.connexion_etablie = True
+            self.mode = "host"
+            self.ecran_actuel = "host_attente"
+            self.code_salon = self.generer_code_salon()
             
-            # Démarrer le jeu en mode host
-            self.lancer_jeu_host()
+            # Démarrer l'attente de connexion dans un thread séparé
+            thread_serveur = threading.Thread(target=self._attendre_connexion)
+            thread_serveur.daemon = True
+            thread_serveur.start()
             
         except Exception as e:
             print(f"Erreur serveur: {e}")
             self.message_erreur = f"Erreur serveur: {e}"
+    
+    def _attendre_connexion(self):
+        """Attendre une connexion dans un thread séparé"""
+        try:
+            # Attendre une connexion
+            self.socket_client, adresse_client = self.socket_serveur.accept()
+            print(f"Client connecté depuis {adresse_client}")
+            
+            # Attendre le code de validation
+            message = self.socket_client.recv(1024).decode()
+            if message.startswith("CODE:"):
+                code_recu = message.split(":")[1]
+                if code_recu == self.code_salon:
+                    self.socket_client.send("OK".encode())
+                    self.connexion_etablie = True
+                    print("Connexion validée!")
+                    
+                    # Signaler au thread principal de démarrer le jeu
+                    self._signal_demarrer_jeu_host = True
+                else:
+                    self.socket_client.send("ERREUR".encode())
+                    self.socket_client.close()
+                    self.socket_client = None
+                    
+        except Exception as e:
+            print(f"Erreur connexion serveur: {e}")
+            self.connexion_etablie = False
     
     def se_connecter_au_serveur(self, ip, code):
         """Se connecte au serveur en mode guest"""
@@ -334,10 +367,11 @@ class NetworkManager:
             reponse = self.socket_client.recv(1024).decode()
             if reponse == "OK":
                 self.connexion_etablie = True
+                self.mode = "guest"
                 print("Connexion réussie!")
                 
-                # Démarrer le jeu en mode guest
-                self.lancer_jeu_guest()
+                # Signaler au thread principal de démarrer le jeu
+                self._signal_demarrer_jeu_guest = True
                 return True
             else:
                 self.socket_client.close()
@@ -366,17 +400,32 @@ class NetworkManager:
         # Importer et lancer le jeu approprié
         if self.jeu_nom == "Katarenga":
             from Jeux.Katarenga.katarenga_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="host",
+                socket_reseau=self.socket_client,
+                mon_numero=1,
+                connexion_etablie=True
+            )
         elif self.jeu_nom == "Isolation":
             from Jeux.Isolation.isolation_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="host",
+                socket_reseau=self.socket_client,
+                mon_numero=1,
+                connexion_etablie=True
+            )
         elif self.jeu_nom == "Congress":
             from Jeux.Congress.congress_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="host",
+                socket_reseau=self.socket_client,
+                mon_numero=1,
+                connexion_etablie=True
+            )
         
-        # Modifier l'instance pour le réseau
-        self.configurer_jeu_reseau()
-        self.jeu_instance.run()
+        # Lancer le jeu
+        if self.jeu_instance:
+            self.jeu_instance.run()
     
     def lancer_jeu_guest(self):
         """Lance le jeu en mode guest (joueur 2)"""
@@ -386,154 +435,98 @@ class NetworkManager:
         # Importer et lancer le jeu approprié
         if self.jeu_nom == "Katarenga":
             from Jeux.Katarenga.katarenga_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="guest",
+                socket_reseau=self.socket_client,
+                mon_numero=2,
+                connexion_etablie=True
+            )
         elif self.jeu_nom == "Isolation":
             from Jeux.Isolation.isolation_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="guest",
+                socket_reseau=self.socket_client,
+                mon_numero=2,
+                connexion_etablie=True
+            )
         elif self.jeu_nom == "Congress":
             from Jeux.Congress.congress_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion()
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="guest",
+                socket_reseau=self.socket_client,
+                mon_numero=2,
+                connexion_etablie=True
+            )
         
-        # Modifier l'instance pour le réseau
-        self.configurer_jeu_reseau()
-        self.jeu_instance.run()
+        # Lancer le jeu
+        if self.jeu_instance:
+            self.jeu_instance.run()
     
     def selectionner_plateau(self):
         """Sélectionne un plateau pour le jeu"""
         try:
-            from Board.board_complet import SelecteurPlateau
-            selecteur = SelecteurPlateau()
-            return selecteur.executer()
+            # Lire le plateau final
+            with open("plateau_final/plateau_finale.json", "r") as f:
+                plateau_data = json.load(f)
+            return plateau_data
         except Exception as e:
-            print(f"Erreur sélection plateau: {e}")
+            print(f"Erreur lors du chargement du plateau: {e}")
             return None
-    
-    def configurer_jeu_reseau(self):
-        """Configure le jeu pour le mode réseau"""
-        if self.jeu_instance:
-            # Ajouter les attributs réseau au jeu
-            self.jeu_instance.reseau_actif = True
-            self.jeu_instance.mon_numero = self.mon_numero
-            self.jeu_instance.socket_client = self.socket_client
-            self.jeu_instance.socket_serveur = self.socket_serveur
-            self.jeu_instance.connexion_etablie = self.connexion_etablie
-            
-            # Ajouter les méthodes réseau
-            self.jeu_instance.envoyer_message = self.envoyer_message
-            self.jeu_instance.ecouter_messages = self.ecouter_messages
-            self.jeu_instance.traiter_message = self.traiter_message
-            
-            # Démarrer l'écoute des messages
-            thread_ecoute = threading.Thread(target=self.ecouter_messages)
-            thread_ecoute.daemon = True
-            thread_ecoute.start()
-    
-    def envoyer_message(self, message):
-        """Envoie un message via le réseau"""
-        if self.connexion_etablie and self.socket_client:
-            try:
-                self.socket_client.send(message.encode())
-                return True
-            except Exception as e:
-                print(f"Erreur envoi message: {e}")
-                self.connexion_etablie = False
-                return False
-        return False
-    
-    def ecouter_messages(self):
-        """Écoute les messages entrants"""
-        while self.connexion_etablie and self.socket_client:
-            try:
-                message = self.socket_client.recv(1024).decode()
-                if message:
-                    self.traiter_message(message)
-                else:
-                    break
-            except Exception as e:
-                print(f"Erreur réception message: {e}")
-                break
-        
-        self.connexion_etablie = False
-        self.adversaire_deconnecte = True
-    
-    def traiter_message(self, message):
-        """Traite les messages reçus"""
-        if self.jeu_instance and hasattr(self.jeu_instance, 'traiter_message_reseau'):
-            self.jeu_instance.traiter_message_reseau(message)
-        else:
-            print(f"Message reçu: {message}")
     
     def gerer_evenements_menu(self, event):
         """Gère les événements dans le menu principal"""
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pos = event.pos
-            
-            if self.bouton_retour.collidepoint(pos):
-                return "retour"
-            elif self.bouton_host.collidepoint(pos):
-                self.mode = "host"
-                self.ecran_actuel = "host_attente"
-                self.code_salon = self.generer_code_salon()
-                
-                # Démarrer le serveur en thread
-                thread_serveur = threading.Thread(target=self.demarrer_serveur)
-                thread_serveur.daemon = True
-                thread_serveur.start()
-                
-            elif self.bouton_guest.collidepoint(pos):
-                self.mode = "guest"
+            if self.bouton_host.collidepoint(event.pos):
+                self.demarrer_serveur()
+            elif self.bouton_guest.collidepoint(event.pos):
                 self.ecran_actuel = "guest_connexion"
+            elif self.bouton_retour.collidepoint(event.pos):
+                return "retour"
         
         return "continuer"
     
     def gerer_evenements_host_attente(self, event):
         """Gère les événements sur l'écran d'attente host"""
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pos = event.pos
-            
-            if self.bouton_retour.collidepoint(pos):
-                # Fermer le serveur
+            if self.bouton_retour.collidepoint(event.pos):
+                # Nettoyer les connexions
                 if self.socket_serveur:
                     self.socket_serveur.close()
+                    self.socket_serveur = None
                 if self.socket_client:
                     self.socket_client.close()
-                self.ecran_actuel = "menu"
+                    self.socket_client = None
                 self.connexion_etablie = False
-                
-            elif self.pyperclip:
-                if hasattr(self, 'bouton_copier_ip') and self.bouton_copier_ip.collidepoint(pos):
-                    self.pyperclip.copy(self.ip_locale)
-                    self.message_copie = "IP copiée!"
-                    self.temps_copie = pygame.time.get_ticks()
-                    
-                elif hasattr(self, 'bouton_copier_code') and self.bouton_copier_code.collidepoint(pos):
-                    self.pyperclip.copy(self.code_salon)
-                    self.message_copie = "Code copié!"
-                    self.temps_copie = pygame.time.get_ticks()
+                self.ecran_actuel = "menu"
+            elif self.pyperclip and hasattr(self, 'bouton_copier_ip') and self.bouton_copier_ip.collidepoint(event.pos):
+                self.pyperclip.copy(self.ip_locale)
+                self.message_copie = "IP copiée!"
+                self.temps_copie = pygame.time.get_ticks()
+            elif self.pyperclip and hasattr(self, 'bouton_copier_code') and self.bouton_copier_code.collidepoint(event.pos):
+                self.pyperclip.copy(self.code_salon)
+                self.message_copie = "Code copié!"
+                self.temps_copie = pygame.time.get_ticks()
         
         return "continuer"
     
     def gerer_evenements_guest_connexion(self, event):
         """Gère les événements sur l'écran de connexion guest"""
         if event.type == pygame.MOUSEBUTTONDOWN:
-            pos = event.pos
-            
-            if self.bouton_retour.collidepoint(pos):
+            if self.bouton_retour.collidepoint(event.pos):
                 self.ecran_actuel = "menu"
-                
-            elif self.bouton_connexion.collidepoint(pos) and self.ip_input and self.code_input:
+                self.message_erreur = ""
+            elif self.bouton_connexion.collidepoint(event.pos) and self.ip_input and self.code_input:
                 if self.se_connecter_au_serveur(self.ip_input, self.code_input):
-                    pass  # Le jeu démarre automatiquement
-                    
-            else:
-                # Gestion des champs de saisie
-                rect_ip = pygame.Rect(self.LARGEUR // 2 - 300, self.HAUTEUR // 2 - 100, 600, 50)
-                rect_code = pygame.Rect(self.LARGEUR // 2 - 300, self.HAUTEUR // 2, 600, 50)
-                
-                if rect_ip.collidepoint(pos):
-                    self.champ_actif = "ip"
-                elif rect_code.collidepoint(pos):
-                    self.champ_actif = "code"
+                    pass  # Le jeu démarre automatiquement via le signal
+            
+            # Gestion des clics dans les champs
+            rect_ip = pygame.Rect(self.LARGEUR // 2 - 300, self.HAUTEUR // 2 - 100, 600, 50)
+            rect_code = pygame.Rect(self.LARGEUR // 2 - 300, self.HAUTEUR // 2, 600, 50)
+            
+            if rect_ip.collidepoint(event.pos):
+                self.champ_actif = "ip"
+            elif rect_code.collidepoint(event.pos):
+                self.champ_actif = "code"
         
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_TAB:
@@ -547,30 +540,26 @@ class NetworkManager:
                     
             elif event.key == pygame.K_RETURN and self.ip_input and self.code_input:
                 if self.se_connecter_au_serveur(self.ip_input, self.code_input):
-                    pass  # Le jeu démarre automatiquement
+                    pass  # Le jeu démarre automatiquement via le signal
                     
             elif event.key == pygame.K_v and pygame.key.get_pressed()[pygame.K_LCTRL]:
                 # Coller depuis le presse-papiers
                 if self.pyperclip:
                     try:
-                        contenu = self.pyperclip.paste()
+                        texte_colle = self.pyperclip.paste()
                         if self.champ_actif == "ip":
-                            # Nettoyer l'IP
-                            ip_clean = ''.join(c for c in contenu if c.isdigit() or c == '.')
-                            self.ip_input = ip_clean[:15]  # Limite à 15 caractères
+                            self.ip_input = texte_colle
                         else:
-                            # Nettoyer le code
-                            code_clean = ''.join(c for c in contenu if c.isdigit())
-                            self.code_input = code_clean[:6]  # Limite à 6 chiffres
+                            self.code_input = texte_colle
                     except:
                         pass
                         
             elif event.unicode.isprintable():
-                if self.champ_actif == "ip" and len(self.ip_input) < 15:
-                    if event.unicode in "0123456789.":
-                        self.ip_input += event.unicode
-                elif self.champ_actif == "code" and len(self.code_input) < 6:
-                    if event.unicode.isdigit():
+                # Ajouter le caractère tapé
+                if self.champ_actif == "ip":
+                    self.ip_input += event.unicode
+                else:
+                    if event.unicode.isdigit() and len(self.code_input) < 6:
                         self.code_input += event.unicode
         
         return "continuer"
@@ -584,28 +573,36 @@ class NetworkManager:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                else:
-                    if self.ecran_actuel == "menu":
-                        resultat = self.gerer_evenements_menu(event)
-                        if resultat == "retour":
-                            running = False
-                            
-                    elif self.ecran_actuel == "host_attente":
-                        self.gerer_evenements_host_attente(event)
+                
+                elif self.ecran_actuel == "menu":
+                    resultat = self.gerer_evenements_menu(event)
+                    if resultat == "retour":
+                        running = False
                         
-                    elif self.ecran_actuel == "guest_connexion":
-                        self.gerer_evenements_guest_connexion(event)
+                elif self.ecran_actuel == "host_attente":
+                    self.gerer_evenements_host_attente(event)
+                    
+                elif self.ecran_actuel == "guest_connexion":
+                    self.gerer_evenements_guest_connexion(event)
             
-            # Affichage
+            # Vérifier les signaux pour démarrer les jeux
+            if self._signal_demarrer_jeu_host:
+                self._signal_demarrer_jeu_host = False
+                self.lancer_jeu_host()
+                running = False  # Sortir de la boucle après avoir lancé le jeu
+                
+            elif self._signal_demarrer_jeu_guest:
+                self._signal_demarrer_jeu_guest = False
+                self.lancer_jeu_guest()
+                running = False  # Sortir de la boucle après avoir lancé le jeu
+            
+            # Dessiner l'écran approprié
             if self.ecran_actuel == "menu":
                 self.dessiner_menu_principal()
             elif self.ecran_actuel == "host_attente":
                 self.dessiner_ecran_host_attente()
             elif self.ecran_actuel == "guest_connexion":
                 self.dessiner_ecran_guest_connexion()
-            elif self.ecran_actuel == "jeu":
-                # Le jeu gère son propre affichage
-                pass
             
             pygame.display.flip()
             clock.tick(60)
