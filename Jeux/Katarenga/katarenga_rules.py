@@ -29,10 +29,14 @@ class Plateau_pion:
         pygame.init()
         
         # Paramètres réseau
-        self.mode_reseau = mode_reseau  # None, "host", ou "guest"
+        self.mode_reseau = mode_reseau  # "host" ou "guest"
         self.socket_reseau = socket_reseau
-        self.mon_numero = mon_numero  # 1 ou 2
+        self.mon_numero = mon_numero
         self.connexion_etablie = connexion_etablie
+        self.network_manager = None  # Sera défini par NetworkManager
+        
+        # Ajouter un attribut pour tracker l'état de la connexion
+        self.adversaire_deconnecte = False
         
         self.font_path = 'assets/police-gloomie_saturday/Gloomie Saturday.otf'
         
@@ -150,15 +154,11 @@ class Plateau_pion:
             thread_recevoir.start()
           # Boucle de jeu
         while self.running:
-            # Traiter les messages réseau dans le thread principal
-            if self.mode_reseau:
-                self.traiter_messages_queue()
-                
-            # Vérifier la connexion réseau
+            # Vérifier la connexion réseau seulement si on est en mode réseau
             if self.mode_reseau and not self.connexion_etablie:
                 self.game_over = True
                 self.gagnant = "Connexion perdue"
-                
+            
             self.ecran.blit(self.background_image, (0, 0))
             self.dessiner_plateau()
             self.afficher_preview_mouvements()
@@ -214,27 +214,24 @@ class Plateau_pion:
         pygame.quit()
 
     def dessiner_plateau(self):
-        # Charger le fichier JSON contenant les chemins d'images
         try:
-            with open("plateau_final/plateau_finale.json", 'r') as f:
+            # Utiliser un chemin absolu
+            chemin_json = os.path.join(os.path.dirname(__file__), "..", "..", "plateau_final", "plateau_finale.json")
+            with open(chemin_json, 'r') as f:
                 plateau_images = json.load(f)
-            
+                
             # Vérifier que le plateau est 10x10
             if len(plateau_images) != 10 or len(plateau_images[0]) != 10:
-                # Fallback: dessiner un damier basique 10x10
-                for i in range(10):
-                    for j in range(10):
-                        couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR
-                        pygame.draw.rect(self.ecran, couleur, 
-                                       (self.OFFSET_X + j * self.TAILLE_CASE, 
-                                        self.OFFSET_Y + i * self.TAILLE_CASE, 
-                                        self.TAILLE_CASE, self.TAILLE_CASE))
-                return
+                raise Exception("Taille de plateau incorrecte")
 
             # Dessiner les images du plateau 10x10
             for i in range(10):
                 for j in range(10):
                     image_path = plateau_images[i][j]
+                    
+                    # Convertir le chemin relatif en chemin absolu
+                    if not os.path.isabs(image_path):
+                        image_path = os.path.join(os.path.dirname(__file__), "..", "..", image_path)
                     
                     # Charger l'image si elle n'est pas déjà en cache
                     if image_path not in self.images:
@@ -243,6 +240,7 @@ class Plateau_pion:
                             self.images[image_path] = pygame.transform.scale(self.images[image_path], 
                                                                         (self.TAILLE_CASE, self.TAILLE_CASE))
                         except pygame.error as e:
+                            print(f"Erreur de chargement de l'image {image_path}: {e}")
                             continue
                     
                     # Dessiner l'image
@@ -251,7 +249,8 @@ class Plateau_pion:
                                 self.OFFSET_Y + i * self.TAILLE_CASE))
 
         except Exception as e:
-            # Fallback: dessiner un damier basique 10x10
+            print(f"Erreur lors du chargement du plateau: {e}")
+            # Fallback: dessiner un damier basique uniquement en cas d'erreur
             for i in range(10):
                 for j in range(10):
                     couleur = self.BLANC if (i + j) % 2 == 0 else self.NOIR

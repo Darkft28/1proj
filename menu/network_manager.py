@@ -392,39 +392,21 @@ class NetworkManager:
         self.mon_numero = 1
         self.ecran_actuel = "jeu"
         
-        # Sélectionner le plateau d'abord
-        plateau_final = self.selectionner_plateau()
-        if not plateau_final:
-            return
-        
-        # Importer et lancer le jeu approprié
         if self.jeu_nom == "Katarenga":
             from Jeux.Katarenga.katarenga_rules import Plateau_pion
             self.jeu_instance = Plateau_pion(
                 mode_reseau="host",
                 socket_reseau=self.socket_client,
                 mon_numero=1,
-                connexion_etablie=True
+                connexion_etablie=True  # Important: s'assurer que c'est True
             )
-        elif self.jeu_nom == "Isolation":
-            from Jeux.Isolation.isolation_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion(
-                mode_reseau="host",
-                socket_reseau=self.socket_client,
-                mon_numero=1,
-                connexion_etablie=True
-            )
-        elif self.jeu_nom == "Congress":
-            from Jeux.Congress.congress_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion(
-                mode_reseau="host",
-                socket_reseau=self.socket_client,
-                mon_numero=1,
-                connexion_etablie=True
-            )
+            # Ajouter l'instance network_manager au jeu
+            self.jeu_instance.network_manager = self
         
         # Lancer le jeu
         if self.jeu_instance:
+            # Envoyer signal de début
+            self.socket_client.send("START".encode())
             self.jeu_instance.run()
     
     def lancer_jeu_guest(self):
@@ -432,35 +414,23 @@ class NetworkManager:
         self.mon_numero = 2
         self.ecran_actuel = "jeu"
         
-        # Importer et lancer le jeu approprié
         if self.jeu_nom == "Katarenga":
             from Jeux.Katarenga.katarenga_rules import Plateau_pion
             self.jeu_instance = Plateau_pion(
                 mode_reseau="guest",
                 socket_reseau=self.socket_client,
                 mon_numero=2,
-                connexion_etablie=True
+                connexion_etablie=True  # Important: s'assurer que c'est True
             )
-        elif self.jeu_nom == "Isolation":
-            from Jeux.Isolation.isolation_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion(
-                mode_reseau="guest",
-                socket_reseau=self.socket_client,
-                mon_numero=2,
-                connexion_etablie=True
-            )
-        elif self.jeu_nom == "Congress":
-            from Jeux.Congress.congress_rules import Plateau_pion
-            self.jeu_instance = Plateau_pion(
-                mode_reseau="guest",
-                socket_reseau=self.socket_client,
-                mon_numero=2,
-                connexion_etablie=True
-            )
+            # Ajouter l'instance network_manager au jeu
+            self.jeu_instance.network_manager = self
         
         # Lancer le jeu
         if self.jeu_instance:
-            self.jeu_instance.run()
+            # Attendre signal de début
+            message = self.socket_client.recv(1024).decode()
+            if message == "START":
+                self.jeu_instance.run()
     
     def selectionner_plateau(self):
         """Sélectionne un plateau pour le jeu"""
@@ -564,6 +534,30 @@ class NetworkManager:
         
         return "continuer"
     
+    def envoyer_mouvement(self, socket, depart, arrivee):
+        """Envoie un mouvement au serveur/client"""
+        try:
+            message = f"MOVE:{depart[0]},{depart[1]}:{arrivee[0]},{arrivee[1]}"
+            socket.send(message.encode())
+            return True
+        except Exception as e:
+            print(f"Erreur envoi mouvement: {e}")
+            return False
+
+    def recevoir_mouvement(self, socket):
+        """Reçoit un mouvement du serveur/client"""
+        try:
+            message = socket.recv(1024).decode()
+            if message.startswith("MOVE:"):
+                _, dep, arr = message.split(":")
+                dl, dc = map(int, dep.split(","))
+                al, ac = map(int, arr.split(","))
+                return (dl, dc), (al, ac)
+            return None
+        except Exception as e:
+            print(f"Erreur réception mouvement: {e}")
+            return None
+    
     def executer(self):
         """Boucle principale du gestionnaire réseau"""
         clock = pygame.time.Clock()
@@ -623,3 +617,31 @@ if __name__ == "__main__":
     
     manager = NetworkManager(jeu)
     manager.executer()
+
+# Dans __init__ de chaque classe Plateau_pion des jeux
+def __init__(self, mode_reseau=None, socket_reseau=None, mon_numero=None, connexion_etablie=False):
+    # ...existing code...
+    if mode_reseau:
+        self.thread_reception = threading.Thread(target=self.recevoir_mouvements)
+        self.thread_reception.daemon = True
+        self.thread_reception.start()
+
+def recevoir_mouvements(self):
+    """Thread de réception des mouvements"""
+    while self.running:
+        try:
+            if self.socket_reseau:
+                mouvement = self.network_manager.recevoir_mouvement(self.socket_reseau)
+                if mouvement is None:  # Déconnexion
+                    self.adversaire_deconnecte = True
+                    break
+                # ...traitement du mouvement...
+        except:
+            self.adversaire_deconnecte = True
+            break
+
+# Dans la méthode gerer_clic des jeux
+def gerer_clic(self):
+    if self.mode_reseau and self.joueur_actuel != self.mon_numero:
+        return  # Pas son tour
+    # ...reste du code...
