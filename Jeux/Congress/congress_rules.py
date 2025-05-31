@@ -180,6 +180,8 @@ class Plateau_pion:
                 self.connexion_etablie = False
 
     def run(self):
+        derniere_verification = pygame.time.get_ticks()
+        
         # Démarrer le thread réseau si en mode réseau
         if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
             thread_reseau = threading.Thread(target=self.recevoir_messages_reseau)
@@ -199,6 +201,13 @@ class Plateau_pion:
         self.running = True
           # Boucle de jeu
         while self.running:
+            maintenant = pygame.time.get_ticks()
+            
+            # Vérifier la connexion toutes les 5 secondes
+            if self.mode_reseau and maintenant - derniere_verification > 5000:
+                self.verifier_connexion()
+                derniere_verification = maintenant
+            
             # Traiter les messages réseau dans le thread principal
             if self.mode_reseau:
                 self.traiter_messages_queue()
@@ -266,16 +275,21 @@ class Plateau_pion:
                 message = self.message_queue.get_nowait()
                 
                 if message.startswith("MOVE:"):
-                    # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
-                    coords = message.split(":")[1].split(",")
-                    ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
-                    
-                    # Appliquer le mouvement de l'adversaire
-                    self.deplacer_pion((ligne_dep, col_dep), (ligne_arr, col_arr))
-                    
-                    # Changer de joueur
-                    self.joueur_actuel = self.mon_numero
-                    
+                    try:
+                        # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
+                        coords = message.split(":")[1].split(",")
+                        ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
+                        
+                        # Appliquer le mouvement de l'adversaire
+                        self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
+                        self.plateau[ligne_dep][col_dep] = 0
+                        
+                        # Changer de joueur
+                        self.joueur_actuel = self.mon_numero
+                    except Exception as e:
+                        print(f"Erreur traitement mouvement: {e}")
+                        self.connexion_etablie = False
+                        
                 elif message.startswith("VICTOIRE:"):
                     self.game_over = True
                     gagnant_numero = int(message.split(":")[1])
@@ -287,8 +301,19 @@ class Plateau_pion:
                 elif message == "ABANDON":
                     self.game_over = True
                     self.gagnant = "Adversaire a abandonné"
+                
+                # Envoyer un accusé de réception
+                try:
+                    if self.socket_reseau:
+                        self.socket_reseau.send("ACK".encode())
+                except:
+                    self.connexion_etablie = False
+                
         except queue.Empty:
             pass
+        except Exception as e:
+            print(f"Erreur queue: {e}")
+            self.connexion_etablie = False
 
     def afficher_preview_mouvements(self):
         """Affiche des cercles noirs pour les mouvements possibles"""
@@ -647,6 +672,21 @@ class Plateau_pion:
         self.game_over = False
         self.gagnant = None
         
+    def verifier_connexion(self):
+        """Vérifie si la connexion est toujours active"""
+        if self.mode_reseau and self.socket_reseau:
+            try:
+                # Envoyer un ping
+                self.socket_reseau.send("PING".encode())
+                # Attendre une réponse avec timeout
+                self.socket_reseau.settimeout(1.0)
+                reponse = self.socket_reseau.recv(1024).decode()
+                self.socket_reseau.settimeout(None)
+                if reponse != "PONG":
+                    self.connexion_etablie = False
+            except:
+                self.connexion_etablie = False
+
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
