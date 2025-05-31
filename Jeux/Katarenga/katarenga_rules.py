@@ -154,11 +154,16 @@ class Plateau_pion:
             thread_recevoir.start()
           # Boucle de jeu
         while self.running:
-            # Vérifier la connexion réseau seulement si on est en mode réseau
-            if self.mode_reseau and not self.connexion_etablie:
-                self.game_over = True
-                self.gagnant = "Connexion perdue"
-            
+            # Traiter les messages réseau
+            if self.mode_reseau:
+                self.traiter_messages_queue()
+                
+                # Vérifier si la connexion est toujours active
+                if not self.connexion_etablie:
+                    self.game_over = True
+                    self.gagnant = "Connexion perdue"
+                    break
+
             self.ecran.blit(self.background_image, (0, 0))
             self.dessiner_plateau()
             self.afficher_preview_mouvements()
@@ -543,13 +548,18 @@ class Plateau_pion:
 
         # Déplacer le pion
         if pion_entre_dans_camp:
-            self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]  # Ajoute cette ligne !
+            self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
             self.plateau[ligne_dep][col_dep] = 0
         else:
             self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
             self.plateau[ligne_dep][col_dep] = 0
 
-        self.tour += 1  # Incrémente le nombre de tours
+        # Envoyer le mouvement au réseau si c'est notre tour
+        if self.mode_reseau and self.socket_reseau:
+            message = f"MOVE:{ligne_dep},{col_dep},{ligne_arr},{col_arr}"
+            self.socket_reseau.send(message.encode())
+
+        self.tour += 1
         return True
 
     def verifier_victoire(self, joueur):
@@ -606,8 +616,23 @@ class Plateau_pion:
 
     def traiter_message_reseau(self, message):
         """Traite les messages reçus du réseau"""
-        # Mettre le message dans la queue pour traitement dans le thread principal
-        self.message_queue.put(message)
+        if message.startswith("MOVE:"):
+            try:
+                _, coords = message.split(":")
+                ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords.split(","))
+                
+                # Mettre à jour le plateau
+                pion = self.plateau[ligne_dep][col_dep]
+                self.plateau[ligne_dep][col_dep] = 0
+                self.plateau[ligne_arr][col_arr] = pion
+                
+                # Changer de tour
+                self.joueur_actuel = 3 - self.joueur_actuel
+            except Exception as e:
+                print(f"Erreur traitement mouvement: {e}")
+        elif message == "ABANDON":
+            self.game_over = True
+            self.gagnant = "Adversaire a abandonné"
 
     def traiter_messages_queue(self):
         """Traite les messages de la queue dans le thread principal (thread-safe)"""

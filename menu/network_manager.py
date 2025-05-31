@@ -420,10 +420,10 @@ class NetworkManager:
                 mode_reseau="guest",
                 socket_reseau=self.socket_client,
                 mon_numero=2,
-                connexion_etablie=True  # Important: s'assurer que c'est True
+                connexion_etablie=True
             )
-            # Ajouter l'instance network_manager au jeu
             self.jeu_instance.network_manager = self
+            self.jeu_instance.joueur_actuel = 1  # Commencer avec le joueur 1 (host)
         
         # Lancer le jeu
         if self.jeu_instance:
