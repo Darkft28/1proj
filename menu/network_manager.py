@@ -402,7 +402,16 @@ class NetworkManager:
             )
             # Ajouter l'instance network_manager au jeu
             self.jeu_instance.network_manager = self
-        
+        elif self.jeu_nom == "Isolation":
+            from Jeux.Isolation.isolation_rules import Plateau_pion
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="host",
+                socket_reseau=self.socket_client,
+                mon_numero=1,
+                connexion_etablie=True
+            )
+            self.jeu_instance.network_manager = self
+    
         # Lancer le jeu
         if self.jeu_instance:
             # Envoyer signal de début
@@ -424,7 +433,17 @@ class NetworkManager:
             )
             self.jeu_instance.network_manager = self
             self.jeu_instance.joueur_actuel = 1  # Commencer avec le joueur 1 (host)
-        
+        elif self.jeu_nom == "Isolation":
+            from Jeux.Isolation.isolation_rules import Plateau_pion
+            self.jeu_instance = Plateau_pion(
+                mode_reseau="guest",
+                socket_reseau=self.socket_client,
+                mon_numero=2,
+                connexion_etablie=True
+            )
+            self.jeu_instance.network_manager = self
+            self.jeu_instance.joueur_actuel = 1  # Host commence
+    
         # Lancer le jeu
         if self.jeu_instance:
             # Attendre signal de début
@@ -607,7 +626,6 @@ class NetworkManager:
         if self.socket_serveur:
             self.socket_serveur.close()
         
-        pygame.quit()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
