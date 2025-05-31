@@ -140,83 +140,76 @@ class Plateau_pion:
             return pygame.font.Font(None, size)
 
     def run(self):
-        # Redimensionner les pions
-        if self.pion_blanc and self.pion_noir:
-            pion_size = int(self.TAILLE_CASE * 0.8)
-            offset = (self.TAILLE_CASE - pion_size) // 2
-            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
-            self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
-        
-        # Démarrer le thread de réception des messages réseau si nécessaire
-        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
-            thread_recevoir = threading.Thread(target=self.recevoir_messages_reseau)
-            thread_recevoir.daemon = True
-            thread_recevoir.start()
-          # Boucle de jeu
-        while self.running:
-            # Traiter les messages réseau
-            if self.mode_reseau:
-                self.traiter_messages_queue()
-                
-                # Vérifier si la connexion est toujours active
-                if not self.connexion_etablie:
-                    self.game_over = True
-                    self.gagnant = "Connexion perdue"
-                    break
+        try:
+            # Redimensionner les pions une seule fois au début
+            if self.pion_blanc and self.pion_noir:
+                pion_size = int(self.TAILLE_CASE * 0.8)
+                self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
+                self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
+            
+            # Démarrer le thread réseau si nécessaire
+            if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+                thread_recevoir = threading.Thread(target=self.recevoir_messages_reseau)
+                thread_recevoir.daemon = True
+                thread_recevoir.start()
 
-            self.ecran.blit(self.background_image, (0, 0))
-            self.dessiner_plateau()
-            self.afficher_preview_mouvements()
-            self.afficher_plateau()
-            
-            if not self.game_over:
-                self.afficher_tour()
-                self.afficher_bouton_abandonner()
-            else:
-                self.afficher_fin_de_jeu()
-            
-            # Gestion des événements
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    if self.mode_reseau and self.socket_reseau:
-                        self.envoyer_message("ABANDON")
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    x, y = event.pos
-                    if not self.game_over:
-                        if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
-                            if self.mode_reseau and self.socket_reseau:
-                                self.envoyer_message("ABANDON")
-                            self.game_over = True
-                            self.gagnant = "abandon"
-                        else:
-                            # En mode réseau, vérifier si c'est notre tour
-                            if self.mode_reseau:
-                                if self.joueur_actuel == self.mon_numero:
-                                    self.gerer_clic()
+            while self.running:
+                # Gérer les événements AVANT le dessin
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        if self.mode_reseau and self.socket_reseau:
+                            self.envoyer_message("ABANDON")
+                        self.running = False
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        x, y = event.pos
+                        if not self.game_over:
+                            if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
+                                if self.mode_reseau and self.socket_reseau:
+                                    self.envoyer_message("ABANDON")
+                                self.game_over = True
+                                self.gagnant = "abandon"
                             else:
-                                self.gerer_clic()
-                    else:
-                        if self.bouton_rejouer.collidepoint(x, y):
-                            self.reinitialiser_jeu()
-                        elif self.bouton_quitter.collidepoint(x, y):
-                            self.running = False  # Juste arrêter la boucle de jeu
-                            pygame.quit()
-                            from menu.menu import Menu
-                            menu = Menu()
-                            menu.executer()
-                            return
-        
-            pygame.display.flip()
-        
-        # Fermer la connexion réseau si active
-        if self.mode_reseau and self.socket_reseau:
-            try:
-                self.socket_reseau.close()
-            except:
-                pass
-        
-        pygame.quit()
+                                if self.mode_reseau:
+                                    if self.joueur_actuel == self.mon_numero:
+                                        self.gerer_clic()
+                                else:
+                                    self.gerer_clic()
+                        else:
+                            if self.bouton_rejouer.collidepoint(x, y):
+                                self.reinitialiser_jeu()
+                            elif self.bouton_quitter.collidepoint(x, y):
+                                self.running = False
+
+                # Traiter les messages réseau
+                if self.mode_reseau:
+                    self.traiter_messages_queue()
+
+                # Effacer l'écran avec le fond
+                self.ecran.blit(self.background_image, (0, 0))
+                
+                # Dessiner tous les éléments
+                self.dessiner_plateau()
+                self.afficher_plateau()
+                self.afficher_preview_mouvements()
+                
+                if not self.game_over:
+                    self.afficher_tour()
+                    self.afficher_bouton_abandonner()
+                else:
+                    self.afficher_fin_de_jeu()
+                
+                # Mettre à jour l'affichage
+                pygame.display.flip()
+
+        except Exception as e:
+            print(f"Erreur fatale: {e}")
+        finally:
+            if self.mode_reseau and self.socket_reseau:
+                try:
+                    self.socket_reseau.close()
+                except:
+                    pass
+            self.running = False
 
     def dessiner_plateau(self):
         try:
