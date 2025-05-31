@@ -290,13 +290,14 @@ class Plateau_pion:
             return False
         
         # Déterminer les mouvements valides selon la couleur
-        if couleur_case == "rouge":  # Tour - mouvement ligne/colonne jusqu'à obstacle ou case rouge
+        if couleur_case == "rouge":
             return self.mouvement_tour(ligne_dep, col_dep, ligne_arr, col_arr)
         elif couleur_case == "bleu":  # Roi - 8 cases adjacentes
-            return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_arr) <= 1
-        elif couleur_case == "jaune":  # Fou - mouvement diagonal jusqu'à obstacle ou case jaune
+            # Correction ici : remplacer col_arr par col_dep dans la deuxième condition
+            return abs(ligne_arr - ligne_dep) <= 1 and abs(col_arr - col_dep) <= 1
+        elif couleur_case == "jaune":
             return self.mouvement_fou(ligne_dep, col_dep, ligne_arr, col_arr)
-        elif couleur_case == "vert":  # Cavalier - mouvement en L
+        elif couleur_case == "vert":
             return ((abs(ligne_arr - ligne_dep) == 2 and abs(col_arr - col_dep) == 1) or 
                     (abs(ligne_arr - ligne_dep) == 1 and abs(col_arr - col_dep) == 2))
         else:
@@ -472,25 +473,32 @@ class Plateau_pion:
 
     def afficher_fin_de_jeu(self):
         police_grand = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
+        
+        # Message de victoire au-dessus du plateau
         if self.gagnant == "abandon":
             texte_principal = "Partie abandonnée"
         else:
             texte_principal = f"{self.gagnant} gagne !"
+        
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        y_message = self.OFFSET_Y - surface_principale.get_height() - 30
+        if y_message < 0:
+            y_message = 0
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 200
+            y_message
         ))
 
-        # Bouton Rejouer
+        # Boutons en bas du plateau
         largeur_bouton = 250
         hauteur_bouton = 60
+        y_boutons = self.OFFSET_Y + (8 * self.TAILLE_CASE) + 40  # Position Y juste sous le plateau
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
-
-        # Bouton Rejouer
+        
+        # Bouton Rejouer (bleu)
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2,
+            y_boutons,
             largeur_bouton,
             hauteur_bouton
         )
@@ -498,11 +506,11 @@ class Plateau_pion:
         texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
         rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
         self.ecran.blit(texte_rejouer, rect_texte_rejouer)
-
-        # Bouton Quitter
+        
+        # Bouton Quitter (rouge)
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2,
+            y_boutons,
             largeur_bouton,
             hauteur_bouton
         )

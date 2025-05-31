@@ -394,35 +394,43 @@ class Plateau_pion:
     def afficher_fin_de_jeu(self):
         police_grand = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 40)
         
-        # Texte principal
+        # Message "Partie abandonnée" au-dessus du plateau
         if self.gagnant == "abandon":
             texte_principal = "Partie abandonnée"
         else:
             texte_principal = f"{self.gagnant} gagne !"
         
         surface_principale = police_grand.render(texte_principal, True, self.BLANC)
+        y_message = self.OFFSET_Y - surface_principale.get_height() - 30
+        if y_message < 0:
+            y_message = 0
         self.ecran.blit(surface_principale, (
             self.LARGEUR // 2 - surface_principale.get_width() // 2,
-            self.HAUTEUR // 2 - 200
+            y_message
         ))
 
-        # Bouton Rejouer
+        # Boutons en bas du plateau
         largeur_bouton = 250
         hauteur_bouton = 60
+        y_boutons = self.OFFSET_Y + (8 * self.TAILLE_CASE) + 40  # Position Y juste sous le plateau
         police_bouton = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 32)
+        
+        # Bouton Rejouer (bleu)
         self.bouton_rejouer = pygame.Rect(
             self.LARGEUR // 2 - largeur_bouton - 20,
-            self.HAUTEUR // 2,
+            y_boutons,
             largeur_bouton,
             hauteur_bouton
         )
         pygame.draw.rect(self.ecran, self.BLEU, self.bouton_rejouer, border_radius=20)
         texte_rejouer = police_bouton.render("Rejouer", True, self.BLANC)
         rect_texte_rejouer = texte_rejouer.get_rect(center=self.bouton_rejouer.center)
-        self.ecran.blit(texte_rejouer, rect_texte_rejouer)        # Bouton Quitter
+        self.ecran.blit(texte_rejouer, rect_texte_rejouer)
+        
+        # Bouton Quitter (rouge)
         self.bouton_quitter = pygame.Rect(
             self.LARGEUR // 2 + 20,
-            self.HAUTEUR // 2,
+            y_boutons,
             largeur_bouton,
             hauteur_bouton
         )
