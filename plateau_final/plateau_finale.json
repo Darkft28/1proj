@@ -1,162 +1,40 @@
 [
-<<<<<<< HEAD
-  [
-    "assets/coin.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/coin.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_verte.png",
-    "assets/image_verte.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_verte.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_verte.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_verte.png",
-    "assets/image_verte.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_verte.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_verte.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_rouge.png",
-    "assets/image_verte.png",
-    "assets/image_jaune.png",
-    "assets/image_bleue.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_rouge.png",
-    "assets/image_rouge.png",
-    "assets/image_bleue.png",
-    "assets/image_bleue.png",
-    "assets/image_rouge.png",
-    "assets/image_verte.png",
-    "assets/image_verte.png",
-    "assets/image_bleue.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_verte.png",
-    "assets/image_verte.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_bleue.png",
-    "assets/image_rouge.png",
-    "assets/image_verte.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/bordure.png",
-    "assets/image_verte.png",
-    "assets/image_verte.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_bleue.png",
-    "assets/image_jaune.png",
-    "assets/image_jaune.png",
-    "assets/image_rouge.png",
-    "assets/bordure.png"
-  ],
-  [
-    "assets/coin.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/bordure.png",
-    "assets/coin.png"
-  ]
-=======
     [
         "assets/image_rouge.png",
+        "assets/image_jaune.png",
+        "assets/image_jaune.png",
+        "assets/image_verte.png",
+        "assets/image_rouge.png",
+        "assets/image_verte.png",
+        "assets/image_jaune.png",
+        "assets/image_bleue.png"
+    ],
+    [
+        "assets/image_bleue.png",
+        "assets/image_rouge.png",
+        "assets/image_verte.png",
+        "assets/image_bleue.png",
         "assets/image_rouge.png",
         "assets/image_verte.png",
         "assets/image_verte.png",
+        "assets/image_bleue.png"
+    ],
+    [
+        "assets/image_bleue.png",
+        "assets/image_verte.png",
         "assets/image_rouge.png",
+        "assets/image_bleue.png",
         "assets/image_jaune.png",
-        "assets/image_jaune.png",
+        "assets/image_bleue.png",
+        "assets/image_rouge.png",
         "assets/image_verte.png"
     ],
     [
-        "assets/image_rouge.png",
-        "assets/image_rouge.png",
         "assets/image_verte.png",
-        "assets/image_verte.png",
-        "assets/image_bleue.png",
-        "assets/image_rouge.png",
-        "assets/image_verte.png",
-        "assets/image_bleue.png"
-    ],
-    [
         "assets/image_jaune.png",
         "assets/image_jaune.png",
-        "assets/image_bleue.png",
-        "assets/image_bleue.png",
-        "assets/image_bleue.png",
-        "assets/image_verte.png",
         "assets/image_rouge.png",
-        "assets/image_bleue.png"
-    ],
-    [
-        "assets/image_jaune.png",
-        "assets/image_jaune.png",
         "assets/image_bleue.png",
-        "assets/image_bleue.png",
-        "assets/image_verte.png",
         "assets/image_jaune.png",
         "assets/image_jaune.png",
         "assets/image_rouge.png"
@@ -168,8 +46,8 @@
         "assets/image_bleue.png",
         "assets/image_rouge.png",
         "assets/image_rouge.png",
-        "assets/image_bleue.png",
-        "assets/image_bleue.png"
+        "assets/image_verte.png",
+        "assets/image_verte.png"
     ],
     [
         "assets/image_rouge.png",
@@ -179,16 +57,16 @@
         "assets/image_rouge.png",
         "assets/image_rouge.png",
         "assets/image_bleue.png",
-        "assets/image_bleue.png"
+        "assets/image_verte.png"
     ],
     [
         "assets/image_verte.png",
         "assets/image_verte.png",
         "assets/image_jaune.png",
         "assets/image_jaune.png",
-        "assets/image_verte.png",
-        "assets/image_verte.png",
-        "assets/image_jaune.png",
+        "assets/image_bleue.png",
+        "assets/image_bleue.png",
+        "assets/image_bleue.png",
         "assets/image_jaune.png"
     ],
     [
@@ -196,10 +74,9 @@
         "assets/image_verte.png",
         "assets/image_jaune.png",
         "assets/image_jaune.png",
-        "assets/image_verte.png",
-        "assets/image_verte.png",
         "assets/image_jaune.png",
-        "assets/image_jaune.png"
+        "assets/image_jaune.png",
+        "assets/image_jaune.png",
+        "assets/image_verte.png"
     ]
->>>>>>> d2860835b35832fdecb376acf19770919ce18fd1
 ]
