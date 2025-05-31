@@ -288,63 +288,66 @@ class Plateau_pion:
         return cases_libres
 
     def run(self):
-        # Redimensionner les pions si ils existent
-        if self.pion_blanc and self.pion_noir:
-            pion_size = int(self.TAILLE_CASE * 0.8)
-            self.pion_blanc = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
-            self.pion_noir = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
-        
-        self.joueur_actuel = 1
-        self.running = True
-          # Démarrer le thread réseau si en mode réseau
-        if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
-            thread_reseau = threading.Thread(target=self.recevoir_messages_reseau, daemon=True)
-            thread_reseau.start()
-            
-        while self.running:
-            # Traiter les messages réseau dans le thread principal
-            if self.mode_reseau:
-                self.traiter_messages_queue()
-                
-            # Vérifier la connexion réseau
-            if self.mode_reseau and not self.connexion_etablie:
-                self.game_over = True
-                self.gagnant = "Connexion perdue"
-            
-            if self.background_image:
-                self.ecran.blit(self.background_image, (0, 0))
-            else:
-                self.ecran.fill(self.BLANC)
-            
-            self.dessiner_plateau()
-            self.afficher_pions()
-            self.afficher_cases_bloquees()
-            
-            if not self.game_over:
-                self.afficher_tour()
-                self.afficher_info_jeu()
-            else:
-                self.afficher_fin_de_jeu()
-            
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
-                    x, y = event.pos
-                    if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner and self.bouton_abandonner.collidepoint(x, y):
+        try:
+            # Démarrer le thread réseau si nécessaire
+            if self.mode_reseau and self.socket_reseau and self.connexion_etablie:
+                thread_reseau = threading.Thread(target=self.recevoir_messages_reseau, daemon=True)
+                thread_reseau.start()
+
+            self.running = True
+            while self.running:
+                # Traiter les messages réseau
+                if self.mode_reseau:
+                    self.traiter_messages_queue()
+                    
+                    if not self.connexion_etablie:
                         self.game_over = True
-                        self.gagnant = "abandon"
-                    else:
-                        self.gerer_clic()
-                elif event.type == pygame.MOUSEBUTTONDOWN and self.game_over:
-                    x, y = event.pos
-                    if hasattr(self, 'bouton_rejouer') and self.bouton_rejouer.collidepoint(x, y):
-                        self.reinitialiser_jeu()
-                    elif hasattr(self, 'bouton_quitter') and self.bouton_quitter.collidepoint(x, y):
+                        self.gagnant = "Connexion perdue"
+
+                # Dessiner le jeu
+                self.ecran.blit(self.background_image, (0, 0))
+                self.dessiner_plateau()
+                self.afficher_pions()
+                self.afficher_cases_bloquees()
+                
+                if not self.game_over:
+                    self.afficher_tour()
+                    self.afficher_info_jeu()
+                else:
+                    self.afficher_fin_de_jeu()
+                
+                # Gestion des événements
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        if self.mode_reseau and self.socket_reseau:
+                            self.envoyer_message("ABANDON")
                         self.running = False
-            pygame.display.flip()
-        
-        return
+                    elif event.type == pygame.MOUSEBUTTONDOWN:
+                        x, y = event.pos
+                        if not self.game_over:
+                            if hasattr(self, 'bouton_abandonner') and self.bouton_abandonner.collidepoint(x, y):
+                                if self.mode_reseau and self.socket_reseau:
+                                    self.envoyer_message("ABANDON")
+                                self.game_over = True
+                                self.gagnant = "abandon"
+                            else:
+                                self.gerer_clic()
+                        else:
+                            if self.bouton_rejouer.collidepoint(x, y):
+                                self.reinitialiser_jeu()
+                            elif self.bouton_quitter.collidepoint(x, y):
+                                self.running = False
+                
+                pygame.display.flip()
+
+        except Exception as e:
+            print(f"Erreur fatale: {e}")
+        finally:
+            if self.mode_reseau and self.socket_reseau:
+                try:
+                    self.socket_reseau.close()
+                except:
+                    pass
 
     def reinitialiser_jeu(self):        
         self.plateau = [[0 for _ in range(8)] for _ in range(8)]
@@ -418,42 +421,53 @@ class Plateau_pion:
                     )
 
     def afficher_pions(self):
-        pion_size = int(self.TAILLE_CASE * 0.8)  
+        # Taille fixe pour les pions (comme dans Katarenga)
+        pion_size = int(self.TAILLE_CASE * 0.8)
         offset = (self.TAILLE_CASE - pion_size) // 2
+
         for i in range(8):
             for j in range(8):
-                if self.plateau[i][j] == 1:
+                if self.plateau[i][j] == 1:  # Pion noir
                     if self.pion_noir:
-                        self.ecran.blit(self.pion_noir,
-                                        (self.OFFSET_X + j * self.TAILLE_CASE + offset,
-                                         self.OFFSET_Y + i * self.TAILLE_CASE + offset))
+                        pion_scaled = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
+                        self.ecran.blit(pion_scaled, 
+                                    (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                                    self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                     else:
-                        # Fallback: cercle noir plus petit
                         pygame.draw.circle(self.ecran, self.NOIR,
-                                         (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
-                                          self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         pion_size//2)
-                elif self.plateau[i][j] == 2:
+                                        (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
+                                        self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
+                                        pion_size//2)
+
+                elif self.plateau[i][j] == 2:  # Pion blanc
                     if self.pion_blanc:
-                        self.ecran.blit(self.pion_blanc,
-                                        (self.OFFSET_X + j * self.TAILLE_CASE + offset,
-                                         self.OFFSET_Y + i * self.TAILLE_CASE + offset))
+                        pion_scaled = pygame.transform.scale(self.pion_blanc, (pion_size, pion_size))
+                        self.ecran.blit(pion_scaled, 
+                                    (self.OFFSET_X + j * self.TAILLE_CASE + offset, 
+                                    self.OFFSET_Y + i * self.TAILLE_CASE + offset))
                     else:
-                        # Fallback: cercle blanc plus petit avec bordure noire
                         pygame.draw.circle(self.ecran, self.BLANC,
-                                         (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
-                                          self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         pion_size//2)
+                                        (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
+                                        self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
+                                        pion_size//2)
                         pygame.draw.circle(self.ecran, self.NOIR,
-                                         (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
-                                          self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
-                                         pion_size//2, 3)
+                                        (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
+                                        self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
+                                        pion_size//2, 2)
 
     def afficher_tour(self):
         police = pygame.font.Font('assets/police-gloomie_saturday/Gloomie Saturday.otf', 35)
-        joueur_nom = "Joueur 1" if self.joueur_actuel == 1 else "Joueur 2"
-        texte = f"Tour de {joueur_nom} - Placez votre pion"
-        couleur = self.NOIR if self.joueur_actuel == 1 else self.BLANC
+        if self.mode_reseau:
+            if self.joueur_actuel == self.mon_numero:
+                texte = "Votre tour - Placez votre pion"
+                couleur = self.NOIR if self.mon_numero == 1 else self.BLANC
+            else:
+                texte = "Tour de l'adversaire"
+                couleur = self.BLANC if self.mon_numero == 1 else self.NOIR
+        else:
+            texte = f"Tour du Joueur {self.joueur_actuel}"
+            couleur = self.NOIR if self.joueur_actuel == 1 else self.BLANC
+        
         surface_texte = police.render(texte, True, couleur)
         self.ecran.blit(surface_texte, (self.LARGEUR // 2 - surface_texte.get_width() // 2, 70))
 
@@ -544,22 +558,23 @@ class Plateau_pion:
                 # En mode réseau, envoyer le mouvement
                 if self.mode_reseau:
                     self.envoyer_message(f"MOVE:{ligne},{col}")
+            
+                # Changer de joueur
+                self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
                 
-                self.joueur_actuel = 2 if self.joueur_actuel == 1 else 1                
                 # Vérifier si le jeu est terminé
                 if self.verifier_fin_de_jeu():
                     self.game_over = True
                     if self.mode_reseau:
                         # Déterminer le gagnant
                         if self.joueur_actuel == self.mon_numero:
-                            # L'adversaire ne peut plus jouer, nous gagnons
+                            self.gagnant = "Adversaire"
+                            self.envoyer_message(f"VICTOIRE:{3-self.mon_numero}")
+                        else:
                             self.gagnant = "Vous"
                             self.envoyer_message(f"VICTOIRE:{self.mon_numero}")
-                        else:
-                            # Nous ne pouvons plus jouer, l'adversaire gagne
-                            adversaire = 2 if self.mon_numero == 1 else 1
-                            self.gagnant = "Adversaire"
-                            self.envoyer_message(f"VICTOIRE:{adversaire}")
+                    else:
+                        self.gagnant = "Joueur 2" if self.joueur_actuel == 1 else "Joueur 1"
 
     def traiter_messages_queue(self):
         """Traite les messages de la queue dans le thread principal (thread-safe)"""
