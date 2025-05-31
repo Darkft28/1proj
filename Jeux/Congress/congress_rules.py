@@ -154,14 +154,17 @@ class Plateau_pion:
         return mouvements
 
     def recevoir_messages_reseau(self):
-        """Thread pour recevoir les messages réseau"""
+        """Thread de réception des messages réseau"""
         while self.connexion_etablie and self.socket_reseau:
             try:
+                # Réduire le timeout à 0.1 seconde
+                self.socket_reseau.settimeout(0.1)
                 message = self.socket_reseau.recv(1024).decode('utf-8')
                 if message:
-                    self.traiter_message_reseau(message)
-                else:
-                    break
+                    self.message_queue.put(message)
+                self.socket_reseau.settimeout(None)
+            except socket.timeout:
+                continue
             except:
                 break
         self.connexion_etablie = False
@@ -269,25 +272,29 @@ class Plateau_pion:
         return
 
     def traiter_messages_queue(self):
-        """Traite les messages de la queue dans le thread principal (thread-safe)"""
+        """Traite les messages de la queue dans le thread principal"""
         try:
             while not self.message_queue.empty():
                 message = self.message_queue.get_nowait()
                 
                 if message.startswith("MOVE:"):
                     try:
-                        # Format: MOVE:ligne_dep,col_dep,ligne_arr,col_arr
                         coords = message.split(":")[1].split(",")
                         ligne_dep, col_dep, ligne_arr, col_arr = map(int, coords)
                         
-                        # Appliquer le mouvement de l'adversaire
+                        # Appliquer le mouvement
                         self.plateau[ligne_arr][col_arr] = self.plateau[ligne_dep][col_dep]
                         self.plateau[ligne_dep][col_dep] = 0
-                        
-                        # Changer de joueur
                         self.joueur_actuel = self.mon_numero
-                    except Exception as e:
-                        print(f"Erreur traitement mouvement: {e}")
+                        
+                        # Vérifier la victoire après le mouvement de l'adversaire
+                        if self.verifier_victoire(3 - self.mon_numero):  # 3 - mon_numero donne le numéro de l'adversaire
+                            self.game_over = True
+                            self.gagnant = "Adversaire"
+                        
+                        # Envoyer confirmation
+                        self.socket_reseau.send("ACK".encode())
+                    except:
                         self.connexion_etablie = False
                         
                 elif message.startswith("VICTOIRE:"):
@@ -297,20 +304,11 @@ class Plateau_pion:
                         self.gagnant = "Vous"
                     else:
                         self.gagnant = "Adversaire"
-                        
+                
                 elif message == "ABANDON":
                     self.game_over = True
                     self.gagnant = "Adversaire a abandonné"
                 
-                # Envoyer un accusé de réception
-                try:
-                    if self.socket_reseau:
-                        self.socket_reseau.send("ACK".encode())
-                except:
-                    self.connexion_etablie = False
-                
-        except queue.Empty:
-            pass
         except Exception as e:
             print(f"Erreur queue: {e}")
             self.connexion_etablie = False
@@ -493,9 +491,11 @@ class Plateau_pion:
                         if self.mode_reseau:
                             if self.joueur_actuel == self.mon_numero:
                                 self.gagnant = "Vous"
+                                # Envoyer le message de victoire à l'adversaire
+                                self.envoyer_message(f"VICTOIRE:{self.mon_numero}")
                             else:
                                 self.gagnant = "Adversaire"
-                            self.envoyer_message(f"VICTOIRE:{self.joueur_actuel}")
+                                self.envoyer_message(f"VICTOIRE:{3-self.mon_numero}")
                         else:
                             self.gagnant = f"Joueur {self.joueur_actuel}"
                     else:
@@ -673,22 +673,14 @@ class Plateau_pion:
         self.gagnant = None
         
     def verifier_connexion(self):
-        """Vérifie si la connexion est toujours active"""
+        """Vérifie périodiquement la connexion"""
         if self.mode_reseau and self.socket_reseau:
             try:
-                # Envoyer un ping
                 self.socket_reseau.send("PING".encode())
-                # Attendre une réponse avec timeout
-                self.socket_reseau.settimeout(1.0)
-                reponse = self.socket_reseau.recv(1024).decode()
-                self.socket_reseau.settimeout(None)
-                if reponse != "PONG":
-                    self.connexion_etablie = False
+                # Ne pas attendre la réponse ici, elle sera traitée dans la queue
             except:
                 self.connexion_etablie = False
 
 if __name__ == "__main__":
     jeu = Plateau_pion()
     jeu.run()
-    
-print
