@@ -73,7 +73,7 @@ class Plateau_pion:
 
         # Plateau de pions initial (10x10 avec bordures)
         self.plateau = [[3, 10, 10, 10, 10, 10, 10, 10, 10, 3],
-                        [10, 2, 2, 2, 2, 2, 2, 2, 2, 10],
+                        [10, 2, 2, 2, 2, 2, 2, 2, 2, 2, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
                         [10, 0, 0, 0, 0, 0, 0, 0, 0, 10],
@@ -95,7 +95,7 @@ class Plateau_pion:
         # Configuration IA
         self.joueur_humain = 1  # Le joueur humain joue avec les pions blancs
         self.joueur_ia = 2      # L'IA joue avec les pions noirs
-        self.delai_ia = 1000    # Délai en millisecondes avant que l'IA joue
+        self.delai_ia = 2000    # Délai en millisecondes avant que l'IA joue
         self.temps_derniere_action = 0
         
         # Variables de jeu
@@ -105,6 +105,15 @@ class Plateau_pion:
         self.bouton_abandonner = None
         self.bouton_rejouer = None
         self.bouton_quitter = None
+
+    def pion_dans_camp_adverse(self, ligne, col, joueur):
+        """Vérifie si un pion est dans le camp adverse"""
+        if joueur == 1:  # Joueur blanc
+            # Camp adverse = coins noirs (9,0) et (9,9)
+            return (ligne, col) in [(9, 0), (9, 9)]
+        else:  # Joueur noir (IA)
+            # Camp adverse = coins blancs (0,0) et (0,9)
+            return (ligne, col) in [(0, 0), (0, 9)]
 
     def dessiner_plateau(self):
         """Dessine le plateau de jeu avec les images"""
@@ -165,6 +174,15 @@ class Plateau_pion:
                                          (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
                                           self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
                                          pion_size//2, 2)
+                    
+                    # Ajouter un indicateur visuel pour les pions bloqués dans le camp adverse
+                    if self.pion_dans_camp_adverse(i, j, 1):
+                        # Dessiner un cercle rouge autour du pion pour indiquer qu'il est bloqué
+                        pygame.draw.circle(self.ecran, self.ROUGE,
+                                         (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
+                                          self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
+                                         pion_size//2 + 5, 3)
+                        
                 elif self.plateau[i][j] == 2:  # Pion noir (IA)
                     if self.pion_noir:
                         pion_scaled = pygame.transform.scale(self.pion_noir, (pion_size, pion_size))
@@ -176,6 +194,14 @@ class Plateau_pion:
                                          (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
                                           self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
                                          pion_size//2)
+                    
+                    # Ajouter un indicateur visuel pour les pions bloqués dans le camp adverse
+                    if self.pion_dans_camp_adverse(i, j, 2):
+                        # Dessiner un cercle rouge autour du pion pour indiquer qu'il est bloqué
+                        pygame.draw.circle(self.ecran, self.ROUGE,
+                                         (self.OFFSET_X + j * self.TAILLE_CASE + self.TAILLE_CASE//2,
+                                          self.OFFSET_Y + i * self.TAILLE_CASE + self.TAILLE_CASE//2),
+                                         pion_size//2 + 5, 3)
 
     def afficher_pion_selectionne(self):
         """Affiche une bordure autour du pion sélectionné"""
@@ -212,6 +238,21 @@ class Plateau_pion:
         ligne_dep, col_dep = depart
         ligne_arr, col_arr = arrivee
 
+        # NOUVEAU : Vérifier si le pion de départ est dans un camp adverse
+        if self.pion_dans_camp_adverse(ligne_dep, col_dep, self.joueur_actuel):
+            return False  # Les pions dans le camp adverse ne peuvent plus bouger
+
+        # PREMIER TEST : Vérification des cases marron
+        try:
+            with open("plateau_final/plateau_finale.json", 'r') as f:
+                plateau_images = json.load(f)
+            image_dest = plateau_images[ligne_arr][col_arr]
+            if "marron" in image_dest.lower():
+                return False
+        except Exception:
+            return False
+
+        # ENSUITE : Les autres vérifications
         # Interdire totalement l'accès aux coins adverses
         if (self.joueur_actuel == 1 and (ligne_arr, col_arr) in [(9,0), (9,9)]) or \
            (self.joueur_actuel == 2 and (ligne_arr, col_arr) in [(0,0), (0,9)]):
@@ -325,6 +366,10 @@ class Plateau_pion:
 
     def get_mouvements_possibles(self, ligne, col):
         """Retourne tous les mouvements possibles pour un pion donné"""
+        # Si le pion est dans un camp adverse, il ne peut plus bouger
+        if self.pion_dans_camp_adverse(ligne, col, self.plateau[ligne][col]):
+            return []
+        
         mouvements = []
         for i in range(10):
             for j in range(10):
@@ -380,12 +425,14 @@ class Plateau_pion:
 
     def jouer_ia(self):
         """IA simple qui choisit un mouvement aléatoire parmi les possibles"""
-        # Trouver tous les pions de l'IA
+        # Trouver tous les pions de l'IA qui peuvent encore bouger
         pions_ia = []
         for i in range(10):
             for j in range(10):
                 if self.plateau[i][j] == self.joueur_ia:
-                    pions_ia.append((i, j))
+                    # Vérifier si le pion peut encore bouger (pas dans un camp adverse)
+                    if not self.pion_dans_camp_adverse(i, j, self.joueur_ia):
+                        pions_ia.append((i, j))
         
         if not pions_ia:
             return False
@@ -418,14 +465,21 @@ class Plateau_pion:
         # Compter les pions
         pions_joueur = 0
         pions_ia = 0
+        pions_joueur_bloques = 0
+        pions_ia_bloques = 0
+        
         for i in range(10):
             for j in range(10):
                 if self.plateau[i][j] == 1:
                     pions_joueur += 1
+                    if self.pion_dans_camp_adverse(i, j, 1):
+                        pions_joueur_bloques += 1
                 elif self.plateau[i][j] == 2:
                     pions_ia += 1
+                    if self.pion_dans_camp_adverse(i, j, 2):
+                        pions_ia_bloques += 1
         
-        texte = f"Vos pions: {pions_joueur} | Pions IA: {pions_ia}"
+        texte = f"Vos pions: {pions_joueur} (bloques: {pions_joueur_bloques}) | Pions IA: {pions_ia} (bloques: {pions_ia_bloques})"
         surface_texte = police.render(texte, True, self.NOIR)
         self.ecran.blit(surface_texte, (20, self.HAUTEUR - 60))
 
@@ -498,10 +552,9 @@ class Plateau_pion:
         self.ecran.blit(texte_quitter, rect_texte_quitter)
 
     def gerer_clic(self):
-        """Gère les clics de souris du joueur humain"""
         pos = pygame.mouse.get_pos()
         
-        # Convertir la position en coordonnées de la grille
+        # Convertir la position en coordonnées de la grille 10x10
         col = (pos[0] - self.OFFSET_X) // self.TAILLE_CASE
         ligne = (pos[1] - self.OFFSET_Y) // self.TAILLE_CASE
         
@@ -510,6 +563,10 @@ class Plateau_pion:
             if self.pion_selectionne is None:
                 # Sélection d'un pion
                 if self.plateau[ligne][col] == self.joueur_actuel:
+                    # Empêcher la sélection si le pion est dans un camp
+                    if (self.joueur_actuel == 1 and (ligne, col) in [(0,0),(0,9)]) or \
+                       (self.joueur_actuel == 2 and (ligne, col) in [(9,0),(9,9)]):
+                        return  # Ne rien faire, pion dans camp
                     self.pion_selectionne = (ligne, col)
                     self.mouvements_possibles = self.get_mouvements_possibles(ligne, col)
             else:
@@ -518,15 +575,15 @@ class Plateau_pion:
                     self.deplacer_pion(self.pion_selectionne, (ligne, col))
                     self.pion_selectionne = None
                     self.mouvements_possibles = []
+                    self.joueur_actuel = 3 - self.joueur_actuel  # Alternance entre 1 et 2
                     
-                    # Vérifier victoire
-                    if self.verifier_victoire(self.joueur_humain):
+                    # Vérifier si un joueur a gagné
+                    if self.verifier_victoire(1):
                         self.game_over = True
-                        self.gagnant = "Joueur"
-                    else:
-                        # Passer le tour à l'IA
-                        self.joueur_actuel = self.joueur_ia
-                        self.temps_derniere_action = pygame.time.get_ticks()
+                        self.gagnant = "Joueur Blanc"
+                    elif self.verifier_victoire(2):
+                        self.game_over = True
+                        self.gagnant = "Joueur Noir"
                 else:
                     # Annuler la sélection si le mouvement est invalide
                     self.pion_selectionne = None

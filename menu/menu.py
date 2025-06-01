@@ -61,7 +61,8 @@ class Menu:
         boutons_config = [
             ("jouer", self.NOIR, "Jouer"),
             ("editeur", self.NOIR, "Creer votre quadrant"),
-            ("parametres", self.NOIR, "Parametres")
+            ("parametres", self.NOIR, "Parametres"),
+            ("quitter", self.NOIR, "Quitter")  # Nouveau bouton
         ]
 
         nb_boutons = len(boutons_config)
@@ -115,7 +116,10 @@ class Menu:
                     
                     for nom, info in self.boutons.items():
                         if info["rect"].collidepoint(x, y):
-                            if nom == "editeur":
+                            if nom == "quitter":  # Nouveau cas
+                                pygame.quit()
+                                sys.exit()
+                            elif nom == "editeur":
                                 # Import modifié pour utiliser le chemin correct
                                 from Board.editeur_board import EditeurPlateau4x4
                                 editeur = EditeurPlateau4x4()
